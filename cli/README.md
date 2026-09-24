@@ -13,7 +13,9 @@ against an **assessment directory** (header + cells).
 | `fovea render <dir> [--json]` | Markdown scorecard grid: attributes × the four column families, each block shown as the **worst** RAG inside it (Red > Amber > Grey > Green). | n/a |
 
 Flags note: Go's `flag` stops at the first positional; pass `dir` after the
-command, not between flags and nothing else.
+command, not between flags and nothing else. `lint` additionally takes
+`--github`, which emits GitHub Actions workflow commands so failures annotate
+the offending cell file in the PR diff.
 
 ## Anti-theater rules enforced (`lint`)
 
@@ -29,6 +31,21 @@ Rules are the point, not a style guide (spec 00-overview):
   definitions trip the copy-paste detector.
 - **No invisible columns** — cell IDs must resolve against columns/attributes
   declared in the header.
+
+## GitHub Action
+
+`action.yml` at the repo root wraps the CLI for consumers:
+
+```yaml
+- uses: macula-io/macula-fovea@main
+  with:
+    dir: security/fovea
+    command: lint          # lint | score | render
+```
+
+The action builds the binary with `setup-go` (no pre-built releases needed
+yet) and runs `lint` with `--github`, so findings appear as inline
+annotations on the assessment's cell files.
 
 ## Build
 

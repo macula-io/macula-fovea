@@ -22,7 +22,7 @@ func allMeasures(c *Cell) (out []Measure) {
 
 // Lint enforces spec v0.2's anti-theater and schema rules (00-overview,
 // 12-cell-schema, 13-scorecard) against an assessment directory.
-func Lint(dir string) int {
+func Lint(dir string, github bool) int {
 	h, f, err := LoadHeader(dir)
 	if err != nil {
 		fmt.Println(err)
@@ -35,6 +35,10 @@ func Lint(dir string) int {
 	f = append(f, lintEachCell(h, cells)...)
 	f = append(f, lintDuplicates(cells)...)
 
+	if github {
+		return lintGithub(h, f)
+	}
+
 	fmt.Printf("fovea lint — %s (%d cells expected)\n", h.System, len(h.ExpectedCells()))
 	if len(f) == 0 {
 		fmt.Println("  clean — no findings")
@@ -42,6 +46,28 @@ func Lint(dir string) int {
 	}
 	errs, warns := printFindings(f)
 	fmt.Printf("  %d error(s), %d warning(s)\n", errs, warns)
+	if errs > 0 {
+		return 1
+	}
+	return 0
+}
+
+// lintGithub emits GitHub Actions workflow commands so failures annotate the
+// offending cell file in the PR diff.
+func lintGithub(h *Header, fs []Finding) int {
+	errs := 0
+	for _, f := range fs {
+		where := f.Where
+		if !strings.HasSuffix(where, ".yaml") {
+			where += ".yaml"
+		}
+		cmd := "warning"
+		if f.Err {
+			cmd = "error"
+			errs++
+		}
+		fmt.Printf("::%s file=%s/cells/%s,line=1,title=fovea::%s\n", cmd, h.CellsDir, where, f.Message)
+	}
 	if errs > 0 {
 		return 1
 	}

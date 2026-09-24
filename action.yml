@@ -1,0 +1,43 @@
+name: "macula-fovea"
+description: >-
+  Run the fovea security-assessment CLI (spec v0.2) against an assessment
+  directory. Lint failures annotate the offending cell files in the PR diff.
+branding:
+  icon: "eye"
+  color: "blue"
+inputs:
+  dir:
+    description: "Path to the assessment directory (containing fovea.yaml)."
+    required: false
+    default: "."
+  command:
+    description: "fovea subcommand to run: lint | score | render"
+    required: false
+    default: "lint"
+  go-version:
+    description: "Go toolchain version (matches .tool-versions)."
+    required: false
+    default: "1.27.0"
+runs:
+  using: "composite"
+  steps:
+    - name: "Setup Go ${{ inputs.go-version }}"
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ inputs.go-version }}
+
+    - name: "Build fovea"
+      shell: bash
+      run: |
+        cd "$GITHUB_ACTION_PATH/cli"
+        go build -o "$RUNNER_TEMP/fovea" ./cmd/fovea
+
+    - name: "Run fovea ${{ inputs.command }}"
+      shell: bash
+      run: |
+        args=()
+        case "${{ inputs.command }}" in
+          lint)  args+=(--github) ;;
+          score) args+=(--json) ;;
+        esac
+        "$RUNNER_TEMP/fovea" "${{ inputs.command }}" "${args[@]}" "${{ inputs.dir }}"
