@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -36,7 +37,7 @@ func Lint(dir string, github bool) int {
 	f = append(f, lintDuplicates(cells)...)
 
 	if github {
-		return lintGithub(h, f)
+		return lintGithub(dir, h, f)
 	}
 
 	fmt.Printf("fovea lint — %s (%d cells expected)\n", h.System, len(h.ExpectedCells()))
@@ -53,20 +54,29 @@ func Lint(dir string, github bool) int {
 }
 
 // lintGithub emits GitHub Actions workflow commands so failures annotate the
-// offending cell file in the PR diff.
-func lintGithub(h *Header, fs []Finding) int {
+// offending cell file in the PR diff. `dir` is the assessment directory as
+// passed by the caller (e.g. "security/fovea"); annotation paths are built
+// relative to the repository root.
+func lintGithub(dir string, h *Header, fs []Finding) int {
+	cellsDir := strings.TrimSuffix(h.CellsDir, "/")
 	errs := 0
 	for _, f := range fs {
 		where := f.Where
-		if !strings.HasSuffix(where, ".yaml") {
-			where += ".yaml"
+		var path string
+		switch {
+		case where == "fovea.yaml":
+			path = filepath.Join(dir, "fovea.yaml")
+		case strings.HasSuffix(where, ".yaml"):
+			path = filepath.Join(dir, cellsDir, where)
+		default:
+			path = filepath.Join(dir, cellsDir, where+".yaml")
 		}
 		cmd := "warning"
 		if f.Err {
 			cmd = "error"
 			errs++
 		}
-		fmt.Printf("::%s file=%s/cells/%s,line=1,title=fovea::%s\n", cmd, h.CellsDir, where, f.Message)
+		fmt.Printf("::%s file=%s,line=1,title=fovea::%s\n", cmd, path, f.Message)
 	}
 	if errs > 0 {
 		return 1
