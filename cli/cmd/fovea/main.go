@@ -29,12 +29,15 @@ func main() {
 	dir := "."
 	jsonOut := false
 	githubOut := false
+	htmlOut := false
 	for _, a := range os.Args[2:] {
 		switch a {
 		case "--json":
 			jsonOut = true
 		case "--github":
 			githubOut = true
+		case "--html", "--format=html":
+			htmlOut = true
 		default:
 			dir = a
 		}
@@ -47,7 +50,7 @@ func main() {
 	case "score":
 		os.Exit(core.Score(dir, jsonOut))
 	case "render":
-		os.Exit(core.Render(dir, jsonOut))
+		os.Exit(core.Render(dir, jsonOut, htmlOut))
 	default:
 		fmt.Fprintln(os.Stderr, usage)
 		os.Exit(2)

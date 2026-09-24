@@ -59,10 +59,9 @@ runs:
           > "$GITHUB_WORKSPACE/${{ inputs.artifact-dir }}/score.json" 2>/dev/null
         "$RUNNER_TEMP/fovea" render "${{ inputs.dir }}" \
           > "$GITHUB_WORKSPACE/${{ inputs.artifact-dir }}/scorecard.md" 2>/dev/null
+        "$RUNNER_TEMP/fovea" render --html "${{ inputs.dir }}" \
+          > "$GITHUB_WORKSPACE/${{ inputs.artifact-dir }}/scorecard.html" 2>/dev/null
         set -e
-        {
-          echo '### fovea scorecard'
-          echo '```'
-          cat "$GITHUB_WORKSPACE/${{ inputs.artifact-dir }}/scorecard.md"
-          echo '```'
-        } >> "$GITHUB_STEP_SUMMARY"
+        # Job summary gets the HTML rendering (emoji RAG badges); GitHub
+        # renders tables+emoji there, which the markdown fence could not.
+        cat "$GITHUB_WORKSPACE/${{ inputs.artifact-dir }}/scorecard.html" >> "$GITHUB_STEP_SUMMARY"

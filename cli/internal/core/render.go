@@ -19,7 +19,9 @@ type Roll struct {
 
 // Render prints the scorecard. 0.2 headers get the frozen grid; 0.3 headers
 // get the coverage-aware grid plus the open-gaps section (spec v0.3, 13).
-func Render(dir string, jsonOut bool) int {
+// --html emits GitHub-job-summary-native HTML (emoji RAG badges; inline
+// styles are sanitized by GitHub, emoji is not).
+func Render(dir string, jsonOut, htmlOut bool) int {
 	h, _, err := LoadHeader(dir)
 	if err != nil {
 		fmt.Println(err)
@@ -28,6 +30,9 @@ func Render(dir string, jsonOut bool) int {
 	cells, _, _ := LoadCells(dir, h)
 
 	if h.Fovea == "0.3" {
+		if htmlOut {
+			return renderV03HTML(h, cells, jsonOut)
+		}
 		return renderV03(h, cells, jsonOut)
 	}
 	return renderV02(h, cells, jsonOut)
