@@ -22,11 +22,12 @@ with the sharpest vision. `macula-fovea` is the sharpest-eyes instrument of
 the ecosystem: a small, explicit framework for answering *"what can go wrong
 here, caused by whom, and what do we honestly have against it."*
 
-> **Status, 2026-09-25:** this is the v0.2 **scaffold** — the specification,
-> the two JSON Schemas, and the skeleton of the first dogfood assessment
-> (`assessments/macula-mesh-realm/`). The `fovea` CLI (`lint` / `score` /
-> `render` / `init`) is planned; the YAML contract it will enforce is what
-> you are looking at now.
+> **Status, 2026-09-25:** the v0.2 **specification, schemas, and
+> operator docs** are stable; the [`fovea`](cli/) CLI exists and enforces
+> them — `init` / `lint` / `score` / `render` as a single static Go binary,
+> dogfooded daily against `assessments/macula-mesh-realm/`, which
+> deliberately still refuses to be claimed. `mcl-fovea` (mesh-served) and the
+> GitHub Action wait for a second real assessment to exist.
 
 ## What is macula-fovea?
 
@@ -109,6 +110,7 @@ semantics in [`spec/v0.2/13-scorecard.md`](spec/v0.2/13-scorecard.md).
 
 ```
 spec/v0.2/            # the framework itself, versioned
+cli/                  # the fovea binary — init / lint / score / render
 docs/                 # operator-facing: reading, writing, maintaining
 schema/               # assessment + cell JSON Schemas (YAML validated via conversion)
 packs/                # reusable pre-filled cell packs per technology class
