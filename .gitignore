@@ -1,0 +1,8 @@
+/bin/
+/dist/
+*.test
+*.out
+
+# Built CLI artifacts — the binary is produced by `go build`, never committed.
+/cli/fovea
+**/fovea
