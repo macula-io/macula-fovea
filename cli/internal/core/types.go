@@ -67,6 +67,11 @@ type Cell struct {
 
 var families = []string{"actors", "lifecycle", "data", "environment"}
 
+// knownVersions: spec versions this CLI can render and lint. Assessments
+// declare their version in the header; older headers keep their exact
+// reading (spec/README: versions are forked, not branched).
+var knownVersions = map[string]bool{"0.2": true, "0.3": true}
+
 var coreFive = []string{"confidentiality", "integrity", "availability", "authenticity", "accountability"}
 
 // DeclaredColumns returns flattened declared columns (families in canonical order).
@@ -138,8 +143,8 @@ func LoadHeader(dir string) (*Header, []Finding, error) {
 		return nil, nil, err
 	}
 	var f []Finding
-	if h.Fovea != "0.2" {
-		f = append(f, errf("fovea.yaml", "fovea must be \"0.2\", got %q", h.Fovea))
+	if h.Fovea == "" || !knownVersions[h.Fovea] {
+		f = append(f, errf("fovea.yaml", "fovea must be a known spec version (0.2, 0.3), got %q", h.Fovea))
 	}
 	if h.Owner == "unassigned" || h.Owner == "" {
 		f = append(f, errf("fovea.yaml", "owner is unassigned"))

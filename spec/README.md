@@ -13,4 +13,4 @@ changes:
 
 Editorial fixes (typos, clarifying examples) do not require a version bump.
 
-Current version: [v0.2](v0.2/00-overview.md).
+Current version: [v0.3](v0.3/00-overview.md).

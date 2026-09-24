@@ -45,7 +45,18 @@ Rules are the point, not a style guide (spec 00-overview):
 
 The action builds the binary with `setup-go` (no pre-built releases needed
 yet) and runs `lint` with `--github`, so findings appear as inline
-annotations on the assessment's cell files.
+annotations on the assessment's cell files. It then writes `score.json` and
+`scorecard.md` into the `artifact-dir` (default `fovea-artifacts/`) — even
+when lint fails, so a red run leaves its report behind — and appends the
+scorecard to the job summary. Consumers upload with:
+
+```yaml
+- uses: actions/upload-artifact@v4
+  if: always()
+  with:
+    name: fovea-artifacts
+    path: fovea-artifacts/
+```
 
 ## Build
 

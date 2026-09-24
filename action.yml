@@ -1,7 +1,8 @@
 name: "macula-fovea"
 description: >-
-  Run the fovea security-assessment CLI (spec v0.2) against an assessment
-  directory. Lint failures annotate the offending cell files in the PR diff.
+  Run the fovea security-assessment CLI (spec v0.2/v0.3) against an assessment
+  directory. Lint failures annotate the offending cell files in the PR diff;
+  score and scorecard are written as artifacts and a job summary.
 branding:
   icon: "eye"
   color: "blue"
@@ -18,6 +19,10 @@ inputs:
     description: "Go toolchain version (matches .tool-versions)."
     required: false
     default: "1.27.0"
+  artifact-dir:
+    description: "Directory (relative to the workspace) for score.json and scorecard.md."
+    required: false
+    default: "fovea-artifacts"
 runs:
   using: "composite"
   steps:
@@ -41,3 +46,23 @@ runs:
           score) args+=(--json) ;;
         esac
         "$RUNNER_TEMP/fovea" "${{ inputs.command }}" "${args[@]}" "${{ inputs.dir }}"
+
+    - name: "Write fovea artifacts"
+      if: always()
+      shell: bash
+      run: |
+        mkdir -p "$GITHUB_WORKSPACE/${{ inputs.artifact-dir }}"
+        # Artifacts are produced even when lint fails: the report is exactly
+        # what a red run should leave behind.
+        set +e
+        "$RUNNER_TEMP/fovea" score --json "${{ inputs.dir }}" \
+          > "$GITHUB_WORKSPACE/${{ inputs.artifact-dir }}/score.json" 2>/dev/null
+        "$RUNNER_TEMP/fovea" render "${{ inputs.dir }}" \
+          > "$GITHUB_WORKSPACE/${{ inputs.artifact-dir }}/scorecard.md" 2>/dev/null
+        set -e
+        {
+          echo '### fovea scorecard'
+          echo '```'
+          cat "$GITHUB_WORKSPACE/${{ inputs.artifact-dir }}/scorecard.md"
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
