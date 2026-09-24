@@ -1,0 +1,63 @@
+id: in_motion.confidentiality
+status: assumed
+owner: unassigned
+threat:
+  definition: >-
+    An actor mirrors traffic between mesh nodes while it is in transit and
+    reads or fingerprints it — either to extract payload confidentiality or
+    to learn the mesh's communication pattern (who talks to whom, how often),
+    which is itself a confidentiality breach on the metadata domain (see
+    spec 10: "data includes metadata").
+  manifestations:
+    - Passive SIGINT / backbone tap on internet links between stations
+    - ISP- or state-level interception combined with harvest-now/decrypt-later archiving
+    - On-path traffic correlation at visible aggregation points if any peer is compelled
+defense:
+  detection:
+    - measure: >-
+        Flow-volume and peer-churn anomaly monitoring; a correlating
+        observer should change observables (timing, burst signatures) in a
+        way that is at least visible to adjacent peers.
+      status: org
+      notes: >-
+        Detection of silent passive taps is structurally impossible on most
+        links (fovea rule: this is why detection-status is not always
+        by_design) — disclosed here rather than faked.
+  countermeasures:
+    - measure: >-
+        All mesh traffic is encrypted end-to-end on the wire: QUIC/TLS with
+        hybrid post-quantum key exchange, every payload frame a signed object
+        bound to the sending node's identity.
+      status: by_design
+      source: >-
+        macula-go repository README ("Everything on the wire is post-quantum:
+        transport... hybrid ML-KEM groups only")
+    - measure: >-
+        Addressed identities are cryptographically derived and discovered
+        via Kademlia/L2 gossip, not DNS, so an on-path reader cannot
+        correlate a packet flow to a human-meaningful name — the traffic
+        graph is obscured by design even when the payloads are readable in
+        principle.
+      status: by_design
+      source: >-
+        macula architecture documents (Sovereign IPv6 addressing section)
+    - measure: >-
+        Fractal mesh (no hub) means flows are distributed across many peers;
+        a single tap learns a local slice, not the fabric's pattern. A
+        tap-behavior equivalent to holing one gateway does not exist.
+      status: by_design
+      source: macula architecture documents (fractal mesh section)
+  recovery:
+    - measure: >-
+        Short-lived station/leaf certificates from the Realm CA cap the
+        exposure window of any session key or captured node material;
+        re-keying on revocation is triggered through SWIM gossip.
+      status: roadmap
+      source: >-
+        architecting-survivability assessment ("The Path to Certification",
+        hardware root of trust, short-lived leaf certificates)
+review_by: 2027-03-31
+notes: >-
+  Seeded cell demonstrating the intended style. All by_design claims are
+  sourced to sibling-repo documentation; the mesh-in-flight verification
+  (an actual tap test against a live mutual-mesh) is an open test case.

@@ -1,0 +1,47 @@
+# Fovea assessment header — validated by ../../../schema/assessment.schema.json
+fovea: "0.2"
+system: macula-mesh-realm
+assessment_date: 2026-09-25
+owner: unassigned          # lint failure until claimed
+
+description: >-
+  Security assessment of the Macula Mesh+Realm substrate: stations running
+  QUIC/DHT/SWIM, the realm/base governance (CA hierarchy, membership policy),
+  and the identity model that binds addressing, transport and admission.
+
+scope:
+  in:
+    - Mesh transport (QUIC/TLS, hybrid post-quantum key exchange)
+    - Overlay routing and discovery (Kademlia DHT, SWIM liveness, mDNS)
+    - Realm/Org CA hierarchy and certificate lifecycle
+    - Station provisioning, bootstrap, first-join attestation
+    - Node-capture resistance (identity storage, key protection)
+
+attributes:
+  core:
+    - confidentiality
+    - integrity
+    - availability
+    - authenticity
+    - accountability
+  enabled:
+    - possession
+  disabled_justifications:
+    utility: >-
+      In this system a utility failure (an asset that is intact but
+      unreadably stale, e.g. an identity whose certificate expired) is
+      functionally identical to an availability failure — the network denies
+      the asset's owner — and is therefore assessed under availability.
+      Enabling utility here would double-count that class without adding a
+      distinct countermeasure set.
+
+columns:
+  actors: [internal, external, trusted_partner, machine_agent]
+  lifecycle: [create, acquire, deliver, operate, admin, decommission]
+  data: [at_rest, in_motion, in_use]
+  environment: [physical_natural, socio_legal, temporal]
+
+trust_anchor_registry: trust-anchors.md
+landscape: landscape.md
+cells_dir: cells/
+team: []

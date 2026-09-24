@@ -1,0 +1,17 @@
+# Fovea cell template — copy as: cells/<column>.<attribute>.yaml
+# Validated by ../../../schema/cell.schema.json
+id: column.attribute
+status: unassessed
+owner: unassigned
+threat:
+  definition: >-
+    
+  manifestations:
+    - (min 1, non-empty; anti-theater)
+defense:
+  detection: []
+  countermeasures: []
+  recovery: []
+review_by: null
+na_reason: null
+notes: ''

@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://macula.io/schemas/fovea/cell.schema.json",
+  "title": "Fovea Cell",
+  "description": "One matrix cell: column attribute. Validated after YAML→JSON conversion.",
+  "type": "object",
+  "required": ["id", "status", "owner", "threat", "defense"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^(([a-z0-9_]+)|x_[a-z0-9_]+)\\.(([a-z0-9_]+)|x_[a-z0-9_]+)$",
+      "description": "<column>.<attribute>. Both parts must be declared in the enclosing assessment header."
+    },
+    "status": {
+      "enum": ["unassessed", "assumed", "assessed", "roadmap", "na"]
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 3,
+      "description": "Lint fails on the literal string 'unassigned'."
+    },
+    "na_reason": {
+      "type": "string",
+      "description": "Required iff status=na; must be non-empty in that case."
+    },
+    "threat": {
+      "type": "object",
+      "required": ["definition", "manifestations"],
+      "additionalProperties": false,
+      "properties": {
+        "definition": { "type": "string", "minLength": 1 },
+        "manifestations": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        }
+      }
+    },
+    "defense": {
+      "type": "object",
+      "required": ["countermeasures", "recovery"],
+      "additionalProperties": false,
+      "properties": {
+        "detection": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/measure" },
+          "description": "How we know the threat is happening. May be empty only with status=na on the cell (detection-free by structural argument)."
+        },
+        "countermeasures": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/measure" }
+        },
+        "recovery": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/measure" }
+        }
+      }
+    },
+    "review_by": {
+      "type": "string",
+      "format": "date",
+      "description": "Required iff status=roadmap."
+    },
+    "notes": { "type": "string" }
+  },
+  "definitions": {
+    "measure": {
+      "type": "object",
+      "required": ["measure", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "measure": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["by_design", "roadmap", "org"] },
+        "source": {
+          "type": "string",
+          "description": "Required and non-empty iff status=by_design."
+        },
+        "notes": { "type": "string" }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "na" } }, "required": ["status"] },
+      "then": { "required": ["na_reason"] }
+    },
+    {
+      "if": { "properties": { "status": { "const": "roadmap" } }, "required": ["status"] },
+      "then": { "required": ["review_by"] }
+    }
+  ]
+}
