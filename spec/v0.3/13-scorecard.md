@@ -38,10 +38,16 @@ v0.2 implied but never showed:
    e.g. `R 2/6`: the block is red, and 2 of its 6 cells are written. The
    red letter still means what it always meant; the fraction explains why.
 2. **Open-gaps section.** After the grid, every unfinished item is named:
-   missing cells, `unassessed` cells, unjustified `na`s, overdue roadmaps.
+   missing cells, `unassigned` cells, unjustified `na`s, overdue roadmaps.
    Gap information moves from "implied by a red wall" to "stated as a list"
    — the list is what CI archives, and it is the honest answer to "what
    remains".
+3. **N/A is not a stain.** A justified `na` cell (threat surface that does
+   not exist) never drags its block's RAG down: the block letter is the
+   worst of its *non-`na`* cells, and a block whose every cell is `na`
+   shows `-` with full coverage. A block with an `unassessed` cell stays
+   red — the red invariant is about unfinished work, not about cells that
+   were honestly judged empty.
 
 ## Headline metrics (unchanged from v0.2)
 

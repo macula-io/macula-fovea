@@ -114,7 +114,11 @@ func renderV03(h *Header, cells map[string]*Cell, jsonOut bool) int {
 				if cell != nil && cell.Status != "unassessed" {
 					authored++
 				}
-				if r := ragRank(cellRAG(cell)); r > worst {
+				rg := cellRAG(cell)
+				if rg == ragGrey {
+					continue // justified N/A: no threat surface, must not drag the block down
+				}
+				if r := ragRank(rg); r > worst {
 					worst = r
 				}
 			}
@@ -122,6 +126,12 @@ func renderV03(h *Header, cells map[string]*Cell, jsonOut bool) int {
 				row[fam] = "·"
 				cov[fam] = "·"
 			} else {
+				if worst == -1 {
+					// every cell in the block is a justified N/A
+					row[fam] = fmt.Sprintf("- %d/%d", authored, total)
+					cov[fam] = fmt.Sprintf("%d/%d", authored, total)
+					continue
+				}
 				// Worst-RAG stays: one unassessed/missing cell keeps the block red.
 				row[fam] = fmt.Sprintf("%s %d/%d", ragLetter(worst), authored, total)
 				cov[fam] = fmt.Sprintf("%d/%d", authored, total)
@@ -132,7 +142,7 @@ func renderV03(h *Header, cells map[string]*Cell, jsonOut bool) int {
 	}
 	fillRollups(&r, attrs, r.GridV03)
 	r.OpenGaps = openGaps(h, cells)
-	r.MetricsNote = "RAG = worst cell in the block (invariant); n/total = authored cells. Open gaps listed below carry the unfinished work."
+	r.MetricsNote = "RAG = worst cell in the block (invariant); n/total = authored cells; - = all cells justified N/A. Open gaps listed below carry the unfinished work."
 
 	if jsonOut {
 		b, _ := json.MarshalIndent(r, "", "  ")
@@ -162,7 +172,11 @@ func fillRollups(r *Roll, attrs []string, grid map[string]map[string]string) {
 			if x == "·" {
 				continue
 			}
-			if t := ragRank(firstRag(x)); t > w {
+			fr := firstRag(x)
+			if fr == "-" {
+				continue // all-N/A block: nothing assessable, roll up from what exists
+			}
+			if t := ragRank(fr); t > w {
 				w = t
 			}
 		}
@@ -175,7 +189,11 @@ func fillRollups(r *Roll, attrs []string, grid map[string]map[string]string) {
 			if x == "·" {
 				continue
 			}
-			if t := ragRank(firstRag(x)); t > w {
+			fr := firstRag(x)
+			if fr == "-" {
+				continue
+			}
+			if t := ragRank(fr); t > w {
 				w = t
 			}
 		}
