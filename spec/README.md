@@ -14,3 +14,6 @@ changes:
 Editorial fixes (typos, clarifying examples) do not require a version bump.
 
 Current version: [v0.3](v0.3/00-overview.md).
+
+Proposals under review live in [`proposals/`](proposals/) — non-normative,
+not lint-enforced, not declarable in a header until promoted.
