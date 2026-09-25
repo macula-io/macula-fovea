@@ -50,6 +50,11 @@ whole difference.
 Closing the ticket without doing the work — or editing the cell — becomes a
 lint error. The tracker and the threat model cannot drift apart.
 
+**Implemented (phases 1+2):** `fovea issues` ships in the CLI — REST client
+over `GITHUB_TOKEN` (stdlib only, no new deps), marker idempotency,
+`--dry-run`, `--check`, `--repo` override with git-remote detection. Phase 3
+(scenario-failure auto-issues) still depends on the v0.4 evidence work.
+
 ## Defaults and limits
 
 - **Opt-in per status:** `roadmap` + `overdue` sync by default. Auto-opening

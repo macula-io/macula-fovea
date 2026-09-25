@@ -11,6 +11,7 @@ against an **assessment directory** (header + cells).
 | `fovea lint <dir>` | Header checks + grid-closure ("every expected cell exists") + per-cell rule enforcement + copy-paste detection (≥85% definition similarity). | any error finding |
 | `fovea score <dir> [--json]` | Computes the [scorecard](../spec/v0.2/13-scorecard.md): expected/present/missing cells, `pct_unassessed`, `na_unjustified`, `pct_by_design`, oldest `review_by` and overdue roadmaps, cells-per-attribute and per-family. Missing cells count as unassessed — closure is scored, not just linted. | lint had errors |
 | `fovea render <dir> [--json]` | Markdown scorecard grid: attributes × the four column families, each block shown as the **worst** RAG inside it (Red > Amber > Grey > Green). | n/a |
+| `fovea issues <dir> [--dry-run] [--check] [--repo o/r]` | Syncs `roadmap`/overdue cells to GitHub issues, idempotently via a `<!-- fovea-cell: <id> -->` body marker. `--check` fails when a roadmap cell's linked issue is closed but the cell is unchanged (the trap). | --check trap / API errors |
 
 Flags note: Go's `flag` stops at the first positional; pass `dir` after the
 command, not between flags and nothing else. `lint` additionally takes
