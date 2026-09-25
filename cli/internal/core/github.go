@@ -133,22 +133,26 @@ func DetectRepo(dir string) (owner, repo string, err error) {
 	if err != nil {
 		return "", "", fmt.Errorf("git remote get-url origin: %w", err)
 	}
-	s := strings.TrimSpace(string(out))
-	// git@github.com:owner/repo.git | https://github.com/owner/repo[.git] | ssh://git@github.com/owner/repo.git
+	return parseRemoteURL(string(out))
+}
+
+// parseRemoteURL handles the three remote forms:
+//   git@host:owner/repo.git | https://host/owner/repo[.git] | ssh://git@host/owner/repo.git
+func parseRemoteURL(s string) (string, string, error) {
+	s = strings.TrimSuffix(strings.TrimSpace(s), "/")
 	s = strings.TrimSuffix(s, ".git")
-	i := strings.LastIndex(s, "/")
-	if i < 0 {
-		return "", "", fmt.Errorf("cannot parse repo from %q", s)
+	if i := strings.Index(s, "://"); i >= 0 {
+		s = s[i+3:] // ssh://git@host/owner/repo -> git@host/owner/repo
 	}
-	repo = s[i+1:]
-	rest := s[:i]
-	j := strings.LastIndex(rest, ":")
-	if j < 0 {
-		j = strings.LastIndex(rest, "/")
+	// scp-like git@host:owner/repo — the colon separates host from path,
+	// and never appears after a "/" in this form. The https scheme colon was
+	// already removed with "://" above.
+	if i := strings.Index(s, ":"); i >= 0 && !strings.Contains(s[:i], "/") {
+		s = s[i+1:]
 	}
-	if j < 0 {
-		return "", "", fmt.Errorf("cannot parse owner from %q", s)
+	parts := strings.Split(s, "/")
+	if len(parts) < 2 {
+		return "", "", fmt.Errorf("cannot parse owner/repo from %q", s)
 	}
-	owner = rest[j+1:]
-	return owner, repo, nil
+	return parts[len(parts)-2], parts[len(parts)-1], nil
 }

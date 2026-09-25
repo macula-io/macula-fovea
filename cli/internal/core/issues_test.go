@@ -25,20 +25,14 @@ func TestDetectRepo(t *testing.T) {
 		"https://github.com/macula-services/mcl-tube.git",
 		"https://github.com/macula-services/mcl-tube",
 		"ssh://git@github.com/macula-services/mcl-tube.git"} {
-		o, r := parseRemote(u)
+		o, r, err := parseRemoteURL(u)
+		if err != nil {
+			t.Fatalf("%q: %v", u, err)
+		}
 		if o != "macula-services" || r != "mcl-tube" {
 			t.Fatalf("%q parsed as %q/%q", u, o, r)
 		}
 	}
-}
-
-func parseRemote(s string) (string, string) {
-	s = strings.TrimSuffix(s, ".git")
-	i := strings.LastIndex(s, "/")
-	repo := s[i+1:]
-	rest := s[:i]
-	j := strings.LastIndexAny(rest, ":/")
-	return rest[j+1:], repo
 }
 
 func TestSyncAgainstFakeServer(t *testing.T) {
