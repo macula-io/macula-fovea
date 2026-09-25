@@ -37,6 +37,12 @@ tables rot quietly: cells go unfilled, copies drift, and nobody can diff "the
 threat model" against "the code". Fovea moves the model into the repository
 next to the code and makes it lintable, scoreable, and renderable.
 
+**Start here:** [`docs/getting-started.md`](docs/getting-started.md) is the
+ten-minute zero-to-clean-grid walkthrough;
+[`docs/reference.md`](docs/reference.md) is the one-page statuses/rules/
+pitfalls cheat sheet; [`spec/v0.3/`](spec/v0.3/00-overview.md) is the
+normative contract everything else obeys.
+
 Concretely, a fovea assessment is four artifacts, produced **in order**:
 
 1. **Trust-anchor register** — the named things whose compromise breaks
