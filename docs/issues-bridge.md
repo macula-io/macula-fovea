@@ -11,6 +11,12 @@ its own issues (label `fovea`), matches on the marker, updates bodies and
 labels in place, closes issues whose cells left `roadmap`, and opens only
 genuinely new ones. Issues without the marker are never touched.
 
+**The body is a work package**, not a pointer: cell id and file path, status,
+owner, `review_by`, the threat definition, the manifestations (what done must
+prevent), the roadmap measures (what closing the gap means, with sources),
+and the cell's notes. An agent handed the ticket alone can do the work and
+flip the cell.
+
 | Cell state | Action |
 |---|---|
 | `roadmap` | issue open, title `security: <cell.id>`, label `fovea/roadmap` |
