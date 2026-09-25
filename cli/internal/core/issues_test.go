@@ -11,7 +11,7 @@ import (
 func TestMarkerRoundTrip(t *testing.T) {
 	id := "operate.confidentiality"
 	body := issueBody(&Cell{ID: id, Status: "roadmap", Owner: "a@b.c", ReviewBy: "2027-03-31",
-		Threat: Threat{Definition: "retraction is broken"}})
+		Threat: Threat{Definition: "retraction is broken"}}, "security/fovea/cells/"+id+".yaml")
 	if got := cellIDFromBody(body); got != id {
 		t.Fatalf("marker round-trip: got %q, want %q", got, id)
 	}

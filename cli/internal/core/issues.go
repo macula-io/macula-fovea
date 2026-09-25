@@ -23,9 +23,41 @@ const (
 	labelOverdue = "fovea/overdue"
 )
 
-func issueBody(c *Cell) string {
-	return fmt.Sprintf("Cell: %s\nStatus: %s\nOwner: %s\nReview by: %s\n\nThreat:\n%s\n\n%s\n",
-		c.ID, c.Status, c.Owner, c.ReviewBy, c.Threat.Definition, markerFor(c.ID))
+func issueBody(c *Cell, cellPath string) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "Cell: %s\n", c.ID)
+	if cellPath != "" {
+		fmt.Fprintf(&b, "File: %s\n", cellPath)
+	}
+	fmt.Fprintf(&b, "Status: %s\nOwner: %s\nReview by: %s\n\nThreat:\n%s\n",
+		c.Status, c.Owner, c.ReviewBy, c.Threat.Definition)
+	if len(c.Threat.Manifestations) > 0 {
+		b.WriteString("\nManifestations:\n")
+		for _, m := range c.Threat.Manifestations {
+			fmt.Fprintf(&b, "- %s\n", m)
+		}
+	}
+	gaps := append([]Measure{}, c.Defense.Countermeasures...)
+	gaps = append(gaps, c.Defense.Recovery...)
+	wrote := false
+	for _, m := range gaps {
+		if m.Status != "roadmap" {
+			continue
+		}
+		if !wrote {
+			b.WriteString("\nThe gap (what closing this means):\n")
+			wrote = true
+		}
+		fmt.Fprintf(&b, "- %s\n", m.Measure)
+		if m.Source != "" {
+			fmt.Fprintf(&b, "  source: %s\n", m.Source)
+		}
+	}
+	if strings.TrimSpace(c.Notes) != "" {
+		fmt.Fprintf(&b, "\nNotes:\n%s\n", c.Notes)
+	}
+	fmt.Fprintf(&b, "\n%s\n", markerFor(c.ID))
+	return b.String()
 }
 
 func issueTitle(c *Cell) string {
@@ -110,7 +142,7 @@ func RunIssues(o IssuesOpts) int {
 	if o.Check {
 		return issuesCheck(o.Dir, roadmap, existing, listed)
 	}
-	return issuesSync(o, roadmap, existing, listed, g, owner, repo)
+	return issuesSync(o, h, roadmap, existing, listed, g, owner, repo)
 }
 
 // issuesCheck — the anti-theater trap: a roadmap cell whose linked issue is
@@ -137,7 +169,7 @@ func issuesCheck(dir string, roadmap map[string]*Cell, existing map[string]Issue
 	return 0
 }
 
-func issuesSync(o IssuesOpts, roadmap map[string]*Cell, existing map[string]Issue, listed bool, g *GH, owner, repo string) int {
+func issuesSync(o IssuesOpts, h *Header, roadmap map[string]*Cell, existing map[string]Issue, listed bool, g *GH, owner, repo string) int {
 	today := time.Now()
 	ids := make([]string, 0, len(roadmap))
 	for id := range roadmap {
@@ -166,7 +198,8 @@ func issuesSync(o IssuesOpts, roadmap map[string]*Cell, existing map[string]Issu
 	for _, id := range ids {
 		c := roadmap[id]
 		overdue := isOverdue(c, today)
-		body := issueBody(c)
+		cellPath := o.Dir + "/" + h.CellsDir + c.ID + ".yaml"
+		body := issueBody(c, cellPath)
 		labels := labelsFor(c, overdue)
 
 		iss, exists := existing[id]
