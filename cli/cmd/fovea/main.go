@@ -1,4 +1,4 @@
-// fovea — CyberSec-as-Code CLI for the macula-fovea spec (v0.2).
+// fovea: CyberSec-as-Code CLI for the macula-fovea spec (v0.2 and v0.3).
 // Single static binary; every command runs against an assessment directory.
 package main
 
@@ -21,8 +21,10 @@ commands:
   render  <dir>   print the scorecard as a markdown grid
   issues  <dir>   sync roadmap/overdue cells to GitHub issues
 
-dir defaults to the current directory. flags: --json on score/render;
---help-issues for the issues command.`
+dir defaults to the current directory. flags: --json on score and render;
+--format md|html|json (or --html) on render; --github on lint;
+--help-issues for the issues command. Results go to stdout, diagnostics
+to stderr.`
 
 const issuesUsage = `fovea issues <dir> [flags]
 
@@ -75,15 +77,27 @@ func main() {
 	jsonOut := false
 	githubOut := false
 	htmlOut := false
-	for _, a := range os.Args[2:] {
+	args := os.Args[2:]
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		if a == "--format" && i+1 < len(args) {
+			i++
+			a = "--format=" + args[i]
+		}
 		switch a {
-		case "--json":
+		case "--json", "--format=json":
 			jsonOut = true
 		case "--github":
 			githubOut = true
 		case "--html", "--format=html":
 			htmlOut = true
+		case "--format=md":
+			// markdown is render's default output
 		default:
+			if strings.HasPrefix(a, "--") && os.Args[1] != "issues" {
+				fmt.Fprintf(os.Stderr, "fovea: unknown flag %s\n\n%s\n", a, usage)
+				os.Exit(2)
+			}
 			dir = a
 		}
 	}
