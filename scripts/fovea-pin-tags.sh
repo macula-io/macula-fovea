@@ -19,10 +19,10 @@ get() {
   if [ -n "${FOVEA_TOKEN-}" ]; then
     auth=(-H "Authorization: Bearer $FOVEA_TOKEN")
   fi
-  curl -fsS --max-time 10 --retry 2 \
+  curl -fsS --connect-timeout 5 --max-time 10 --retry 1 \
     -H "Accept: application/vnd.github+json" \
     -H "X-GitHub-Api-Version: 2022-11-28" \
-    "${auth[@]}" "$api/repos/$repo/$1"
+    ${auth[@]+"${auth[@]}"} "$api/repos/$repo/$1"
 }
 
 all='[]'

@@ -8,7 +8,9 @@
 #   FOVEA_ACTION_REF         github.action_ref
 #   FOVEA_ACTION_REPOSITORY  github.action_repository
 #   FOVEA_TOKEN              github.token, for the tag lookup
-#   GITHUB_ACTION_PATH, RUNNER_TEMP, GITHUB_STEP_SUMMARY, GITHUB_API_URL
+#   GITHUB_ACTION_PATH, RUNNER_TEMP, GITHUB_STEP_SUMMARY, GITHUB_API_URL,
+#   GITHUB_ENV (FOVEA_RESOLVED_REF is exported there for the build step)
+#   FOVEA_PIN_CHECK_TIMEOUT  seconds the tag lookup may take (default 60)
 set -uo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 
@@ -18,16 +20,30 @@ repo="${FOVEA_ACTION_REPOSITORY-}"
 # (actions/runner#2473). The runner downloads a remote action to
 # .../_actions/<owner>/<repo>/<ref>, so the path says the same thing. A
 # local action (uses: ./) runs from the workspace and has no ref at all.
-if [ -z "$ref" ] && [[ "${GITHUB_ACTION_PATH-}" =~ /_actions/([^/]+)/([^/]+)/(.+)$ ]]; then
+# The greedy ^.* anchors on the LAST /_actions/ segment; trailing slashes
+# are dropped first.
+path="${GITHUB_ACTION_PATH-}"
+while [[ "$path" == */ ]]; do path="${path%/}"; done
+if [ -z "$ref" ] && [[ "$path" =~ ^.*/_actions/([^/]+)/([^/]+)/(.+)$ ]]; then
   repo="${repo:-${BASH_REMATCH[1]}/${BASH_REMATCH[2]}}"
   ref="${BASH_REMATCH[3]}"
+fi
+
+# The build step bakes the resolved ref into the binary as its version.
+if [ -n "$ref" ] && [ -n "${GITHUB_ENV-}" ] && [[ "$ref" != *$'\n'* ]]; then
+  printf 'FOVEA_RESOLVED_REF=%s\n' "$ref" >> "$GITHUB_ENV"
 fi
 export FOVEA_ACTION_REPOSITORY="${repo:-macula-io/macula-fovea}"
 
 tags="${RUNNER_TEMP:-/tmp}/fovea-action-tags.json"
 rm -f "$tags"
 if [[ "$ref" =~ ^[0-9a-f]{40}$ ]]; then
-  if "$here/fovea-pin-tags.sh" "$FOVEA_ACTION_REPOSITORY" > "$tags.part" 2>/dev/null; then
+  # Bounded: a stalled API degrades to the notice, never holds the job.
+  bound=()
+  if command -v timeout >/dev/null 2>&1; then
+    bound=(timeout "${FOVEA_PIN_CHECK_TIMEOUT:-60}")
+  fi
+  if ${bound[@]+"${bound[@]}"} "$here/fovea-pin-tags.sh" "$FOVEA_ACTION_REPOSITORY" > "$tags.part" 2>/dev/null; then
     mv "$tags.part" "$tags"
   else
     rm -f "$tags.part"

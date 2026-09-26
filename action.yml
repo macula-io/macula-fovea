@@ -51,11 +51,15 @@ runs:
         # (and warn). The build is small; no cache.
         cache: false
 
+    # The binary's version is the ref this Action was pinned at (exported by
+    # the pin check as FOVEA_RESOLVED_REF), "dev" for a local path. The log
+    # then names the tool version and the spec versions it reads.
     - name: "Build fovea"
       shell: bash
       run: |
         cd "$GITHUB_ACTION_PATH/cli"
-        go build -o "$RUNNER_TEMP/fovea" ./cmd/fovea
+        go build -ldflags "-X main.version=${FOVEA_RESOLVED_REF:-dev}" -o "$RUNNER_TEMP/fovea" ./cmd/fovea
+        "$RUNNER_TEMP/fovea" --version
 
     # Inputs reach bash only through env, never interpolated into the script:
     # an expression expanded inside run: is spliced in before bash parses it, so
