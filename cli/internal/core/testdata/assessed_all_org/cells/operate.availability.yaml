@@ -1,0 +1,15 @@
+id: operate.availability
+status: assessed
+owner: fixture@example.org
+threat:
+  definition: operate threatens availability
+  manifestations:
+    - operate availability observed
+defense:
+  detection:
+    - measure: operate availability monitored
+      status: org
+  countermeasures:
+    - measure: operate availability prevented
+      status: org
+  recovery: []

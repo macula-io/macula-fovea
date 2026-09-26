@@ -1,0 +1,4 @@
+describes: A cell file whose id does not match its file name; the grid position it names is then missing.
+base: valid_complete
+remove: []
+errors: [cell_id_filename_mismatch, cell_id_undeclared, grid_missing_cell]

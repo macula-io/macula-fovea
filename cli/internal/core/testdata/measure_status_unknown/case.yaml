@@ -1,0 +1,4 @@
+describes: A measure status outside by_design, roadmap, org.
+base: valid_complete
+remove: []
+errors: [measure_status_unknown]

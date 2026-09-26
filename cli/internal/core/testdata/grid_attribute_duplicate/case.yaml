@@ -1,0 +1,4 @@
+describes: An attribute listed twice in the header.
+base: valid_complete
+remove: []
+errors: [grid_attribute_duplicate]

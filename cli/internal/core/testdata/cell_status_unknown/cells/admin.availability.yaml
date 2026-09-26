@@ -1,0 +1,16 @@
+id: admin.availability
+status: done
+owner: fixture@example.org
+threat:
+  definition: admin threatens availability
+  manifestations:
+    - admin availability observed
+defense:
+  detection:
+    - measure: admin availability monitored
+      status: org
+  countermeasures:
+    - measure: admin availability prevented
+      status: by_design
+      source: fixture
+  recovery: []

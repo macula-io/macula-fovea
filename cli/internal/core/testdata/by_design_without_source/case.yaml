@@ -1,0 +1,4 @@
+describes: A by_design measure without a source is an unsourced claim.
+base: valid_complete
+remove: []
+errors: [by_design_without_source]

@@ -1,0 +1,4 @@
+describes: Two cells whose threat definitions are at least 85% similar were filled, not written.
+base: valid_complete
+remove: []
+errors: [definition_copy_paste]

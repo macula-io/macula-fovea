@@ -1,0 +1,16 @@
+id: internal.confidentiality
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: an operator quietly exports every stored key to a personal laptop
+  manifestations:
+    - internal confidentiality observed
+defense:
+  detection:
+    - measure: internal confidentiality monitored
+      status: org
+  countermeasures:
+    - measure: internal confidentiality prevented
+      status: by_design
+      source: fixture
+  recovery: []

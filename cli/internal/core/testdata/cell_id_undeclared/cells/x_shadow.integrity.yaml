@@ -1,0 +1,13 @@
+id: x_shadow.integrity
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: shadow column threatens integrity
+  manifestations:
+    - shadow column observed
+defense:
+  detection:
+    - measure: shadow column monitored
+      status: org
+  countermeasures: []
+  recovery: []
