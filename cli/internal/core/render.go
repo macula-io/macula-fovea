@@ -3,16 +3,17 @@ package core
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"sort"
 )
 
 type Roll struct {
 	ByAttr      map[string]string            `json:"by_attribute"`
 	ByFamily    map[string]string            `json:"by_family"`
-	Grid        map[string]map[string]string `json:"grid"`        // attribute -> family -> rag (0.2)
-	GridV03     map[string]map[string]string `json:"grid_v03"`    // attribute -> family -> "RAG n/total" (0.3)
-	Coverage    map[string]map[string]string `json:"coverage"`    // attribute -> family -> "authored/total"
-	OpenGaps    []string                     `json:"open_gaps"`   // v0.3: named gaps
+	Grid        map[string]map[string]string `json:"grid"`      // attribute -> family -> rag (0.2)
+	GridV03     map[string]map[string]string `json:"grid_v03"`  // attribute -> family -> "RAG n/total" (0.3)
+	Coverage    map[string]map[string]string `json:"coverage"`  // attribute -> family -> "authored/total"
+	OpenGaps    []string                     `json:"open_gaps"` // v0.3: named gaps
 	MetricsNote string                       `json:"note"`
 	Version     string                       `json:"version"`
 }
@@ -21,26 +22,27 @@ type Roll struct {
 // get the coverage-aware grid plus the open-gaps section (spec v0.3, 13).
 // --html emits GitHub-job-summary-native HTML (emoji RAG badges; inline
 // styles are sanitized by GitHub, emoji is not).
-func Render(dir string, jsonOut, htmlOut bool) int {
+func Render(dir string, jsonOut, htmlOut bool, stdout, stderr io.Writer) int {
+	w := stdout
 	h, _, err := LoadHeader(dir)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Fprintln(w, err)
 		return 1
 	}
 	cells, _, _ := LoadCells(dir, h)
 
 	if h.Fovea == "0.3" {
 		if htmlOut {
-			return renderV03HTML(h, cells, jsonOut)
+			return renderV03HTML(w, h, cells, jsonOut)
 		}
-		return renderV03(h, cells, jsonOut)
+		return renderV03(w, h, cells, jsonOut)
 	}
-	return renderV02(h, cells, jsonOut)
+	return renderV02(w, h, cells, jsonOut)
 }
 
 // ---- 0.2: the frozen reading (unchanged output, worst-RAG per block) ----
 
-func renderV02(h *Header, cells map[string]*Cell, jsonOut bool) int {
+func renderV02(w io.Writer, h *Header, cells map[string]*Cell, jsonOut bool) int {
 	r := Roll{Version: "0.2", ByAttr: map[string]string{}, ByFamily: map[string]string{}, Grid: map[string]map[string]string{}}
 	attrs := h.AttributesVM()
 	cols := h.DeclaredColumns()
@@ -71,26 +73,26 @@ func renderV02(h *Header, cells map[string]*Cell, jsonOut bool) int {
 
 	if jsonOut {
 		b, _ := json.MarshalIndent(r, "", "  ")
-		fmt.Println(string(b))
+		fmt.Fprintln(w, string(b))
 		return 0
 	}
 
-	fmt.Printf("# Scorecard — %s\n\n", h.System)
-	fmt.Println("| attribute     | actors | lifecycle | data | environment |")
-	fmt.Println("|---|---|---|---|---|")
+	fmt.Fprintf(w, "# Scorecard — %s\n\n", h.System)
+	fmt.Fprintln(w, "| attribute     | actors | lifecycle | data | environment |")
+	fmt.Fprintln(w, "|---|---|---|---|---|")
 	for _, a := range attrs {
 		g := r.Grid[a]
-		fmt.Printf("| %-13s | %s | %s | %s | %s |\n", a, g["actors"], g["lifecycle"], g["data"], g["environment"])
+		fmt.Fprintf(w, "| %-13s | %s | %s | %s | %s |\n", a, g["actors"], g["lifecycle"], g["data"], g["environment"])
 	}
-	fmt.Println("| **rollup**    | " + r.ByFamily["actors"] + " | " + r.ByFamily["lifecycle"] + " | " + r.ByFamily["data"] + " | " + r.ByFamily["environment"] + " |")
-	fmt.Println()
-	fmt.Println("R=Red(unassessed/missing), A=Amber(assumed/roadmap), -=Grey(na), G=Green(assessed); block = cell with worst RAG in the block")
+	fmt.Fprintln(w, "| **rollup**    | "+r.ByFamily["actors"]+" | "+r.ByFamily["lifecycle"]+" | "+r.ByFamily["data"]+" | "+r.ByFamily["environment"]+" |")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "R=Red(unassessed/missing), A=Amber(assumed/roadmap), -=Grey(na), G=Green(assessed); block = cell with worst RAG in the block")
 	return 0
 }
 
 // ---- 0.3: coverage-aware grid + open gaps; worst-RAG is the invariant ----
 
-func renderV03(h *Header, cells map[string]*Cell, jsonOut bool) int {
+func renderV03(w io.Writer, h *Header, cells map[string]*Cell, jsonOut bool) int {
 	r := Roll{
 		Version:  "0.3",
 		ByAttr:   map[string]string{},
@@ -151,21 +153,21 @@ func renderV03(h *Header, cells map[string]*Cell, jsonOut bool) int {
 
 	if jsonOut {
 		b, _ := json.MarshalIndent(r, "", "  ")
-		fmt.Println(string(b))
+		fmt.Fprintln(w, string(b))
 		return 0
 	}
 
-	fmt.Printf("# Scorecard — %s (spec v0.3)\n\n", h.System)
-	fmt.Println("| attribute     | actors | lifecycle | data | environment |")
-	fmt.Println("|---|---|---|---|---|")
+	fmt.Fprintf(w, "# Scorecard — %s (spec v0.3)\n\n", h.System)
+	fmt.Fprintln(w, "| attribute     | actors | lifecycle | data | environment |")
+	fmt.Fprintln(w, "|---|---|---|---|---|")
 	for _, a := range attrs {
 		g := r.GridV03[a]
-		fmt.Printf("| %-13s | %-7s | %-10s | %-5s | %-12s |\n", a, g["actors"], g["lifecycle"], g["data"], g["environment"])
+		fmt.Fprintf(w, "| %-13s | %-7s | %-10s | %-5s | %-12s |\n", a, g["actors"], g["lifecycle"], g["data"], g["environment"])
 	}
-	fmt.Println()
-	fmt.Println(r.MetricsNote)
-	fmt.Println()
-	printOpenGaps(r.OpenGaps)
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, r.MetricsNote)
+	fmt.Fprintln(w)
+	printOpenGaps(w, r.OpenGaps)
 	return 0
 }
 
@@ -241,19 +243,19 @@ func openGaps(h *Header, cells map[string]*Cell) []string {
 	return gaps
 }
 
-func printOpenGaps(gaps []string) {
+func printOpenGaps(w io.Writer, gaps []string) {
 	if len(gaps) == 0 {
-		fmt.Println("## Open gaps — none. The grid is complete.")
+		fmt.Fprintln(w, "## Open gaps — none. The grid is complete.")
 		return
 	}
-	fmt.Printf("## Open gaps — %d\n", len(gaps))
+	fmt.Fprintf(w, "## Open gaps — %d\n", len(gaps))
 	const capN = 40
 	for i, g := range gaps {
 		if i == capN {
-			fmt.Printf("… and %d more\n", len(gaps)-capN)
+			fmt.Fprintf(w, "… and %d more\n", len(gaps)-capN)
 			break
 		}
-		fmt.Printf("- %s\n", g)
+		fmt.Fprintf(w, "- %s\n", g)
 	}
 }
 

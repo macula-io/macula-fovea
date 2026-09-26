@@ -4,6 +4,7 @@ package core
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"sort"
 
@@ -27,11 +28,11 @@ type Header struct {
 		Enabled                []string          `yaml:"enabled"`
 		DisabledJustifications map[string]string `yaml:"disabled_justifications"`
 	} `yaml:"attributes"`
-	Columns            map[string][]string `yaml:"columns"`
-	TrustAnchorReg     string              `yaml:"trust_anchor_registry"`
-	Landscape          string              `yaml:"landscape"`
-	CellsDir           string              `yaml:"cells_dir"`
-	Team               []string            `yaml:"team"`
+	Columns        map[string][]string `yaml:"columns"`
+	TrustAnchorReg string              `yaml:"trust_anchor_registry"`
+	Landscape      string              `yaml:"landscape"`
+	CellsDir       string              `yaml:"cells_dir"`
+	Team           []string            `yaml:"team"`
 }
 
 // ---- cell ----
@@ -144,10 +145,10 @@ func LoadHeader(dir string) (*Header, []Finding, error) {
 	}
 	var f []Finding
 	if h.Fovea == "" || !knownVersions[h.Fovea] {
-		f = append(f, errf("fovea.yaml", "fovea must be a known spec version (0.2, 0.3), got %q", h.Fovea))
+		f = append(f, errf("header_version_unknown", "fovea.yaml", "fovea must be a known spec version (0.2, 0.3), got %q", h.Fovea))
 	}
 	if h.Owner == "unassigned" || h.Owner == "" {
-		f = append(f, errf("fovea.yaml", "owner is unassigned"))
+		f = append(f, errf("header_owner_unassigned", "fovea.yaml", "owner is unassigned"))
 	}
 	seen := map[string]bool{}
 	for _, a := range h.Attributes.Core {
@@ -155,12 +156,12 @@ func LoadHeader(dir string) (*Header, []Finding, error) {
 	}
 	for _, req := range coreFive {
 		if !seen[req] {
-			f = append(f, errf("fovea.yaml", "core attribute %q missing", req))
+			f = append(f, errf("grid_core_attribute_missing", "fovea.yaml", "core attribute %q missing", req))
 		}
 	}
 	for fam := range map[string]bool{"actors": true, "lifecycle": true, "data": true, "environment": true} {
 		if len(h.Columns[fam]) == 0 {
-			f = append(f, errf("fovea.yaml", "columns.%s must be declared and non-empty", fam))
+			f = append(f, errf("grid_missing_column", "fovea.yaml", "columns.%s must be declared and non-empty", fam))
 		}
 	}
 	if h.CellsDir == "" {
@@ -178,7 +179,7 @@ func LoadCells(dir string, h *Header) (map[string]*Cell, []string, []Finding) {
 	var f []Finding
 	ents, err := os.ReadDir(cellsDir)
 	if err != nil {
-		return out, files, append(f, errf(cellsDir, "cannot read cells dir"))
+		return out, files, append(f, errf("cells_dir_unreadable", cellsDir, "cannot read cells dir"))
 	}
 	for _, e := range ents {
 		if e.IsDir() {
@@ -191,11 +192,11 @@ func LoadCells(dir string, h *Header) (map[string]*Cell, []string, []Finding) {
 		files = append(files, name)
 		c := &Cell{}
 		if err := readYAML(cellsDir+name, c); err != nil {
-			f = append(f, errf(name, "parse: %v", err))
+			f = append(f, errf("cell_parse", name, "parse: %v", err))
 			continue
 		}
 		if got := name[:len(name)-5]; got != c.ID {
-			f = append(f, errf(name, "filename base %q != id %q", got, c.ID))
+			f = append(f, errf("cell_id_filename_mismatch", name, "filename base %q != id %q", got, c.ID))
 		}
 		out[c.ID] = c
 	}
@@ -206,20 +207,17 @@ func LoadCells(dir string, h *Header) (map[string]*Cell, []string, []Finding) {
 // ---- findings ----
 
 type Finding struct {
-	Err     bool // true=error, false=warning
+	Rule    string // stable rule code, e.g. grid_missing_column; conformance cases name it
+	Err     bool   // true=error, false=warning
 	Where   string
 	Message string
 }
 
-func errf(where, format string, args ...any) Finding {
-	return Finding{true, where, fmt.Sprintf(format, args...)}
+func errf(rule, where, format string, args ...any) Finding {
+	return Finding{rule, true, where, fmt.Sprintf(format, args...)}
 }
 
-func warnf(where, format string, args ...any) Finding {
-	return Finding{false, where, fmt.Sprintf(format, args...)}
-}
-
-func printFindings(fs []Finding) (errs, warns int) {
+func printFindings(w io.Writer, fs []Finding) (errs, warns int) {
 	sort.Slice(fs, func(i, j int) bool {
 		if fs[i].Where != fs[j].Where {
 			return fs[i].Where < fs[j].Where
@@ -234,7 +232,7 @@ func printFindings(fs []Finding) (errs, warns int) {
 		} else {
 			warns++
 		}
-		fmt.Printf("  %-5s %-34s %s\n", kind, f.Where, f.Message)
+		fmt.Fprintf(w, "  %-5s %-34s %s\n", kind, f.Where, f.Message)
 	}
 	return
 }

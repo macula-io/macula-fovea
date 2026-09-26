@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"sort"
 	"time"
 )
@@ -64,17 +65,12 @@ type Metrics struct {
 }
 
 // Score runs coverage-aware scoring (13-scorecard). Exit 1 on lint errors.
-func Score(dir string, jsonOut bool) int {
-	h, lf, err := LoadHeader(dir)
+func Score(dir string, jsonOut bool, stdout, stderr io.Writer) int {
+	h, cells, lf, err := Check(dir)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Fprintln(stdout, err)
 		return 1
 	}
-	cells, _, cf := LoadCells(dir, h)
-	lf = append(lf, cf...)
-	lf = append(lf, lintCoverage(h, cells)...)
-	lf = append(lf, lintEachCell(h, cells)...)
-	lf = append(lf, lintDuplicates(cells)...)
 
 	lintErrs := 0
 	for _, f := range lf {
@@ -87,12 +83,12 @@ func Score(dir string, jsonOut bool) int {
 
 	if jsonOut {
 		b, _ := json.MarshalIndent(m, "", "  ")
-		fmt.Println(string(b))
+		fmt.Fprintln(stdout, string(b))
 	} else {
-		printScore(m)
+		printScore(stdout, m)
 	}
 	if lintErrs > 0 {
-		fmt.Printf("note: %d lint error(s) — run: fovea lint %s\n", lintErrs, dir)
+		fmt.Fprintf(stdout, "note: %d lint error(s) — run: fovea lint %s\n", lintErrs, dir)
 		return 1
 	}
 	return 0
@@ -100,10 +96,10 @@ func Score(dir string, jsonOut bool) int {
 
 func computeMetrics(h *Header, cells map[string]*Cell, lintErrs int) Metrics {
 	m := Metrics{
-		System:       h.System,
-		ByAttribute:  map[string]int{},
-		ByFamily:     map[string]int{},
-		LintErrors:   lintErrs,
+		System:        h.System,
+		ByAttribute:   map[string]int{},
+		ByFamily:      map[string]int{},
+		LintErrors:    lintErrs,
 		ExpectedCells: len(h.ExpectedCells()),
 	}
 	total, unassessed, naUnj, byDesign, totalMeasures := 0, 0, 0, 0, 0
@@ -181,27 +177,27 @@ func pct(n, d int) float64 {
 	return float64(n) / float64(d)
 }
 
-func printScore(m Metrics) {
-	fmt.Printf("fovea score — %s\n", m.System)
-	fmt.Printf("  expected cells      %d\n", m.ExpectedCells)
-	fmt.Printf("  present cells       %d (missing %d)\n", m.PresentCells, m.MissingCells)
-	fmt.Printf("  pct_unassessed      %.1f%%\n", 100*m.PctUnassessed)
-	fmt.Printf("  na_unjustified      %d\n", m.NAUnjustified)
-	fmt.Printf("  pct_by_design       %.1f%%\n", 100*m.PctByDesign)
+func printScore(w io.Writer, m Metrics) {
+	fmt.Fprintf(w, "fovea score — %s\n", m.System)
+	fmt.Fprintf(w, "  expected cells      %d\n", m.ExpectedCells)
+	fmt.Fprintf(w, "  present cells       %d (missing %d)\n", m.PresentCells, m.MissingCells)
+	fmt.Fprintf(w, "  pct_unassessed      %.1f%%\n", 100*m.PctUnassessed)
+	fmt.Fprintf(w, "  na_unjustified      %d\n", m.NAUnjustified)
+	fmt.Fprintf(w, "  pct_by_design       %.1f%%\n", 100*m.PctByDesign)
 	if m.OldestReviewBy != "" {
-		fmt.Printf("  oldest review_by    %s (%d overdue)\n", m.OldestReviewBy, m.OverdueRoadmap)
+		fmt.Fprintf(w, "  oldest review_by    %s (%d overdue)\n", m.OldestReviewBy, m.OverdueRoadmap)
 	}
-	fmt.Println("  cells per attribute")
+	fmt.Fprintln(w, "  cells per attribute")
 	attrs := make([]string, 0, len(m.ByAttribute))
 	for a := range m.ByAttribute {
 		attrs = append(attrs, a)
 	}
 	sort.Strings(attrs)
 	for _, a := range attrs {
-		fmt.Printf("    %-16s %d\n", a, m.ByAttribute[a])
+		fmt.Fprintf(w, "    %-16s %d\n", a, m.ByAttribute[a])
 	}
-	fmt.Println("  cells per family")
+	fmt.Fprintln(w, "  cells per family")
 	for _, f := range families {
-		fmt.Printf("    %-16s %d\n", f, m.ByFamily[f])
+		fmt.Fprintf(w, "    %-16s %d\n", f, m.ByFamily[f])
 	}
 }

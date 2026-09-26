@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"io"
 	"os"
 )
 
@@ -22,15 +23,16 @@ notes: ""
 `
 
 // Init creates the full declared grid as unassessed skeletons.
-func Init(dir string) int {
+func Init(dir string, stdout, stderr io.Writer) int {
+	w := stdout
 	h, f, err := LoadHeader(dir)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Fprintln(w, err)
 		return 1
 	}
 	if len(f) > 0 {
-		fmt.Println("fovea init — header findings first:")
-		printFindings(f)
+		fmt.Fprintln(w, "fovea init — header findings first:")
+		printFindings(w, f)
 		return 1
 	}
 	cells, _, _ := LoadCells(dir, h)
@@ -42,14 +44,14 @@ func Init(dir string) int {
 		}
 		p := dir + "/" + h.CellsDir + id + ".yaml"
 		if err := os.WriteFile(p, []byte(fmt.Sprintf(cellSkeleton, id)), 0o644); err != nil {
-			fmt.Println(err)
+			fmt.Fprintln(w, err)
 			return 1
 		}
 		made++
 	}
-	fmt.Printf("fovea init — created %d cell skeleton(s), %d already present\n", made, skipped)
+	fmt.Fprintf(w, "fovea init — created %d cell skeleton(s), %d already present\n", made, skipped)
 	if made > 0 {
-		fmt.Println("every skeleton starts as status: unassessed / owner: unassigned — both are lint errors until written and claimed.")
+		fmt.Fprintln(w, "every skeleton starts as status: unassessed / owner: unassigned — both are lint errors until written and claimed.")
 	}
 	return 0
 }

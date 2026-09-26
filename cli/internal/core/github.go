@@ -28,11 +28,12 @@ type Issue struct {
 
 type GH struct {
 	owner, repo, token string
+	base               string // REST root, no trailing slash
 	hc                 *http.Client
 }
 
 func NewGH(owner, repo, token string) *GH {
-	return &GH{owner: owner, repo: repo, token: token, hc: &http.Client{}}
+	return &GH{owner: owner, repo: repo, token: token, base: "https://api.github.com", hc: &http.Client{}}
 }
 
 func (g *GH) do(method, path string, in, out any) error {
@@ -44,7 +45,7 @@ func (g *GH) do(method, path string, in, out any) error {
 		}
 		body = bytes.NewReader(b)
 	}
-	req, err := http.NewRequest(method, "https://api.github.com"+path, body)
+	req, err := http.NewRequest(method, g.base+path, body)
 	if err != nil {
 		return err
 	}
@@ -137,7 +138,8 @@ func DetectRepo(dir string) (owner, repo string, err error) {
 }
 
 // parseRemoteURL handles the three remote forms:
-//   git@host:owner/repo.git | https://host/owner/repo[.git] | ssh://git@host/owner/repo.git
+//
+//	git@host:owner/repo.git | https://host/owner/repo[.git] | ssh://git@host/owner/repo.git
 func parseRemoteURL(s string) (string, string, error) {
 	s = strings.TrimSuffix(strings.TrimSpace(s), "/")
 	s = strings.TrimSuffix(s, ".git")

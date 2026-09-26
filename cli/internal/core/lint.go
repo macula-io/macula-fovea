@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"io"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -23,41 +24,51 @@ func allMeasures(c *Cell) (out []Measure) {
 
 // Lint enforces spec v0.2's anti-theater and schema rules (00-overview,
 // 12-cell-schema, 13-scorecard) against an assessment directory.
-func Lint(dir string, github bool) int {
-	h, f, err := LoadHeader(dir)
+func Lint(dir string, github bool, stdout, stderr io.Writer) int {
+	h, _, f, err := Check(dir)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Fprintln(stdout, err)
 		return 1
 	}
-	cells, _, cf := LoadCells(dir, h)
-	f = append(f, cf...)
-
-	f = append(f, lintCoverage(h, cells)...)
-	f = append(f, lintEachCell(h, cells)...)
-	f = append(f, lintDuplicates(cells)...)
 
 	if github {
-		return lintGithub(dir, h, f)
+		return lintGithub(stdout, dir, h, f)
 	}
 
-	fmt.Printf("fovea lint — %s (%d cells expected)\n", h.System, len(h.ExpectedCells()))
+	fmt.Fprintf(stdout, "fovea lint — %s (%d cells expected)\n", h.System, len(h.ExpectedCells()))
 	if len(f) == 0 {
-		fmt.Println("  clean — no findings")
+		fmt.Fprintln(stdout, "  clean — no findings")
 		return 0
 	}
-	errs, warns := printFindings(f)
-	fmt.Printf("  %d error(s), %d warning(s)\n", errs, warns)
+	errs, warns := printFindings(stdout, f)
+	fmt.Fprintf(stdout, "  %d error(s), %d warning(s)\n", errs, warns)
 	if errs > 0 {
 		return 1
 	}
 	return 0
 }
 
+// Check loads an assessment directory and runs every lint rule against it.
+// It is the single entry point lint, score and render share, so the three
+// commands can never disagree about what an assessment is.
+func Check(dir string) (*Header, map[string]*Cell, []Finding, error) {
+	h, f, err := LoadHeader(dir)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	cells, _, cf := LoadCells(dir, h)
+	f = append(f, cf...)
+	f = append(f, lintCoverage(h, cells)...)
+	f = append(f, lintEachCell(h, cells)...)
+	f = append(f, lintDuplicates(cells)...)
+	return h, cells, f, nil
+}
+
 // lintGithub emits GitHub Actions workflow commands so failures annotate the
 // offending cell file in the PR diff. `dir` is the assessment directory as
 // passed by the caller (e.g. "security/fovea"); annotation paths are built
 // relative to the repository root.
-func lintGithub(dir string, h *Header, fs []Finding) int {
+func lintGithub(w io.Writer, dir string, h *Header, fs []Finding) int {
 	cellsDir := strings.TrimSuffix(h.CellsDir, "/")
 	errs := 0
 	for _, f := range fs {
@@ -76,7 +87,7 @@ func lintGithub(dir string, h *Header, fs []Finding) int {
 			cmd = "error"
 			errs++
 		}
-		fmt.Printf("::%s file=%s,line=1,title=fovea::%s\n", cmd, path, f.Message)
+		fmt.Fprintf(w, "::%s file=%s,line=1,title=fovea::%s\n", cmd, path, f.Message)
 	}
 	if errs > 0 {
 		return 1
@@ -89,7 +100,7 @@ func lintCoverage(h *Header, cells map[string]*Cell) []Finding {
 	var f []Finding
 	for _, id := range h.ExpectedCells() {
 		if _, ok := cells[id]; !ok {
-			f = append(f, errf(id, "missing cell (run: fovea init)"))
+			f = append(f, errf("grid_missing_cell", id, "missing cell (run: fovea init)"))
 		}
 	}
 	return f
@@ -110,39 +121,39 @@ func lintEachCell(h *Header, cells map[string]*Cell) []Finding {
 		// Rule: no invisible columns/attributes (12-cell-schema hard rule 2).
 		parts := strings.SplitN(id, ".", 2)
 		if len(parts) != 2 || !declaredCol[parts[0]] || !declaredAttr[parts[1]] {
-			f = append(f, errf(id, "id parts not declared in the header"))
+			f = append(f, errf("cell_id_undeclared", id, "id parts not declared in the header"))
 		}
 		if !statuses[c.Status] {
-			f = append(f, errf(id, "unknown status %q", c.Status))
+			f = append(f, errf("cell_status_unknown", id, "unknown status %q", c.Status))
 		}
 		if c.Owner == "" || c.Owner == "unassigned" {
-			f = append(f, errf(id, "owner is unassigned"))
+			f = append(f, errf("cell_owner_unassigned", id, "owner is unassigned"))
 		}
 		switch c.Status {
 		case "na":
 			if strings.TrimSpace(c.NAReason) == "" {
-				f = append(f, errf(id, "status na without na_reason"))
+				f = append(f, errf("na_without_reason", id, "status na without na_reason"))
 			}
 		case "roadmap":
 			if c.ReviewBy == "" {
-				f = append(f, errf(id, "status roadmap without review_by"))
+				f = append(f, errf("roadmap_without_review_by", id, "status roadmap without review_by"))
 			} else if _, err := time.Parse("2006-01-02", c.ReviewBy); err != nil {
-				f = append(f, errf(id, "review_by %q is not an ISO date", c.ReviewBy))
+				f = append(f, errf("review_by_not_iso_date", id, "review_by %q is not an ISO date", c.ReviewBy))
 			}
 		default:
 			if strings.TrimSpace(c.Threat.Definition) == "" {
-				f = append(f, errf(id, "empty threat definition"))
+				f = append(f, errf("definition_empty", id, "empty threat definition"))
 			}
 			if len(c.Threat.Manifestations) == 0 {
-				f = append(f, errf(id, "zero manifestations"))
+				f = append(f, errf("manifestations_empty", id, "zero manifestations"))
 			}
 		}
 		for _, m := range allMeasures(c) {
 			if !measureStatuses[m.Status] {
-				f = append(f, errf(id, "measure with unknown status %q", m.Status))
+				f = append(f, errf("measure_status_unknown", id, "measure with unknown status %q", m.Status))
 			}
 			if m.Status == "by_design" && strings.TrimSpace(m.Source) == "" {
-				f = append(f, errf(id, "by_design measure without source"))
+				f = append(f, errf("by_design_without_source", id, "by_design measure without source"))
 			}
 		}
 		// Anti-theater: assessed must mean the product answers something.
@@ -156,7 +167,7 @@ func lintEachCell(h *Header, cells map[string]*Cell) []Finding {
 					}
 				}
 				if allOrg {
-					f = append(f, errf(id, "status assessed but every measure is org — cell is org-managed, not assessed"))
+					f = append(f, errf("assessed_all_org", id, "status assessed but every measure is org — cell is org-managed, not assessed"))
 				}
 			}
 		}
@@ -181,7 +192,7 @@ func lintDuplicates(cells map[string]*Cell) []Finding {
 		for j := i + 1; j < len(ids); j++ {
 			sim := jaccard(toks[ids[i]], toks[ids[j]])
 			if sim >= 0.85 {
-				f = append(f, errf(ids[i], "threat definition ≥85%% similar to %s (%.2f) — copy-paste", ids[j], sim))
+				f = append(f, errf("definition_copy_paste", ids[i], "threat definition ≥85%% similar to %s (%.2f) — copy-paste", ids[j], sim))
 			}
 		}
 	}

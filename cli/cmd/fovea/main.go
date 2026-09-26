@@ -89,15 +89,15 @@ func main() {
 	}
 	switch os.Args[1] {
 	case "init":
-		os.Exit(core.Init(dir))
+		os.Exit(core.Init(dir, os.Stdout, os.Stderr))
 	case "lint":
-		os.Exit(core.Lint(dir, githubOut))
+		os.Exit(core.Lint(dir, githubOut, os.Stdout, os.Stderr))
 	case "score":
-		os.Exit(core.Score(dir, jsonOut))
+		os.Exit(core.Score(dir, jsonOut, os.Stdout, os.Stderr))
 	case "render":
-		os.Exit(core.Render(dir, jsonOut, htmlOut))
+		os.Exit(core.Render(dir, jsonOut, htmlOut, os.Stdout, os.Stderr))
 	case "issues":
-		os.Exit(core.RunIssues(parseIssuesFlags(os.Args[2:])))
+		os.Exit(core.RunIssues(parseIssuesFlags(os.Args[2:]), os.Stdout, os.Stderr))
 	default:
 		fmt.Fprintln(os.Stderr, usage)
 		os.Exit(2)
