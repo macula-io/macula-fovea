@@ -1,0 +1,11 @@
+describes: The header invents a column (banana) without the x_ prefix; its cells are expected and missing too.
+base: valid_complete
+remove: []
+expect:
+  errors:
+    - {rule: grid_column_unknown, where: fovea.yaml}
+    - {rule: grid_missing_cell, where: banana.accountability}
+    - {rule: grid_missing_cell, where: banana.authenticity}
+    - {rule: grid_missing_cell, where: banana.availability}
+    - {rule: grid_missing_cell, where: banana.confidentiality}
+    - {rule: grid_missing_cell, where: banana.integrity}

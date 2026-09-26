@@ -1,4 +1,6 @@
 describes: An attribute listed twice in the header.
 base: valid_complete
 remove: []
-errors: [grid_attribute_duplicate]
+expect:
+  errors:
+    - {rule: grid_attribute_duplicate, where: fovea.yaml}

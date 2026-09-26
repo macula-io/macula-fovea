@@ -6,7 +6,9 @@ threat:
   manifestations:
     - deliver integrity observed
 defense:
-  detection: []
+  detection:
+    - measure: deliver integrity monitored
+      status: org
   countermeasures:
     - measure: deliver integrity prevented later
       status: roadmap

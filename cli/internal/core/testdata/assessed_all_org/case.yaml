@@ -1,4 +1,6 @@
 describes: An assessed cell whose measures are all org claims nothing the product does.
 base: valid_complete
 remove: []
-errors: [assessed_all_org]
+expect:
+  errors:
+    - {rule: assessed_all_org, where: operate.availability}

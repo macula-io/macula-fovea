@@ -1,4 +1,6 @@
 describes: A roadmap measure in a non-roadmap cell requires the cell's review_by (spec 12 measure statuses).
 base: valid_complete
 remove: []
-errors: [roadmap_measure_without_review_by]
+expect:
+  errors:
+    - {rule: roadmap_measure_without_review_by, where: admin.integrity}

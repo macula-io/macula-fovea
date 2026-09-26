@@ -1,4 +1,22 @@
 describes: The header enables an attribute the spec does not define (banana); its cells are expected and missing too.
 base: valid_complete
 remove: []
-errors: [grid_attribute_unknown, grid_missing_cell]
+expect:
+  errors:
+    - {rule: grid_attribute_unknown, where: fovea.yaml}
+    - {rule: grid_missing_cell, where: acquire.banana}
+    - {rule: grid_missing_cell, where: admin.banana}
+    - {rule: grid_missing_cell, where: at_rest.banana}
+    - {rule: grid_missing_cell, where: create.banana}
+    - {rule: grid_missing_cell, where: decommission.banana}
+    - {rule: grid_missing_cell, where: deliver.banana}
+    - {rule: grid_missing_cell, where: external.banana}
+    - {rule: grid_missing_cell, where: in_motion.banana}
+    - {rule: grid_missing_cell, where: in_use.banana}
+    - {rule: grid_missing_cell, where: internal.banana}
+    - {rule: grid_missing_cell, where: machine_agent.banana}
+    - {rule: grid_missing_cell, where: operate.banana}
+    - {rule: grid_missing_cell, where: physical_natural.banana}
+    - {rule: grid_missing_cell, where: socio_legal.banana}
+    - {rule: grid_missing_cell, where: temporal.banana}
+    - {rule: grid_missing_cell, where: trusted_partner.banana}

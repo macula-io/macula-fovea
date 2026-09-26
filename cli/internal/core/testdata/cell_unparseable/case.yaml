@@ -1,4 +1,0 @@
-describes: A cell that is not valid YAML is reported, never silently dropped.
-base: valid_complete
-remove: []
-errors: [cell_parse, grid_missing_cell]

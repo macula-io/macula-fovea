@@ -6,7 +6,9 @@ threat:
   manifestations:
     - in use integrity observed
 defense:
-  detection: []
+  detection:
+    - measure: in use integrity monitored
+      status: org
   countermeasures:
     - measure: in use integrity prevented later
       status: roadmap

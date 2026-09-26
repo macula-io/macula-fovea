@@ -1,4 +1,6 @@
 describes: A roadmap cell with zero manifestations fails; roadmap cells obey the content rules.
 base: valid_complete
 remove: []
-errors: [manifestations_empty]
+expect:
+  errors:
+    - {rule: manifestations_empty, where: deliver.availability}

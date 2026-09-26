@@ -42,7 +42,7 @@ func TestLoadErrorsGoToStderr(t *testing.T) {
 }
 
 func TestScoreCountsWhitespaceNAReasonAsUnjustified(t *testing.T) {
-	h, cells, _, err := Check(materialize(t, "na_whitespace_reason"))
+	h, cells, _, err := Check(materialize(t, "na_without_reason_whitespace"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +74,7 @@ func hasGap(gaps []string, id, reason string) bool {
 // A whitespace na_reason is no reason: the block must not read as a
 // justified, fully covered N/A, and open gaps must name the cell.
 func TestRenderWhitespaceNAReasonIsNotJustified(t *testing.T) {
-	r := renderJSON(t, materialize(t, "na_whitespace_reason"))
+	r := renderJSON(t, materialize(t, "na_without_reason_whitespace"))
 	if got := r.GridV03["confidentiality"]["environment"]; got != "R 2/3" {
 		t.Errorf("environment x confidentiality block = %q, want %q", got, "R 2/3")
 	}
@@ -94,7 +94,7 @@ func TestOpenGapsNameUnassignedOwnersAndOverdueRoadmaps(t *testing.T) {
 }
 
 func TestOpenGapsAreNotCapped(t *testing.T) {
-	dir := materialize(t, "cells_dir_missing") // 80 missing cells
+	dir := materialize(t, "cells_dir_unreadable") // 80 missing cells
 	var md, html, errb bytes.Buffer
 	Render(dir, false, false, &md, &errb)
 	Render(dir, false, true, &html, &errb)
@@ -121,7 +121,7 @@ func TestInitWithoutTrailingSlashWritesIntoCellsDir(t *testing.T) {
 }
 
 func TestInitCreatesMissingCellsDir(t *testing.T) {
-	dir := materialize(t, "cells_dir_missing")
+	dir := materialize(t, "cells_dir_unreadable")
 	var out, errb bytes.Buffer
 	if code := Init(dir, &out, &errb); code != 0 {
 		t.Fatalf("init exit %d: %s%s", code, out.String(), errb.String())
@@ -135,7 +135,7 @@ func TestInitCreatesMissingCellsDir(t *testing.T) {
 // A cell that fails to parse is absent from the loaded grid, but its file
 // is someone's work: init must never overwrite it with a skeleton.
 func TestInitNeverOverwritesAnUnparseableCell(t *testing.T) {
-	dir := materialize(t, "cell_unparseable")
+	dir := materialize(t, "cell_parse")
 	p := filepath.Join(dir, "cells", "at_rest.integrity.yaml")
 	before, _ := os.ReadFile(p)
 	var out, errb bytes.Buffer

@@ -109,7 +109,7 @@ func TestSyncOpensRoadmapIssuesAndClosesStaleOnes(t *testing.T) {
 // close the typo'd cell's issue as "no longer roadmap".
 func TestIssuesRefusesWhenACellFailsToLoad(t *testing.T) {
 	gh := &fakeGitHub{listing: []map[string]any{openIssueFor(7, "at_rest.integrity")}}
-	code, _, errs := runIssues(t, materialize(t, "cell_unparseable"), IssuesOpts{Token: "t"}, gh.serve(t))
+	code, _, errs := runIssues(t, materialize(t, "cell_parse"), IssuesOpts{Token: "t"}, gh.serve(t))
 	if code != 1 || len(gh.writes) != 0 {
 		t.Fatalf("exit %d, writes %q: want exit 1 and no writes", code, gh.writes)
 	}

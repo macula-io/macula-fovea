@@ -1,4 +1,6 @@
 describes: A cell status outside unassessed, assumed, assessed, roadmap, na.
 base: valid_complete
 remove: []
-errors: [cell_status_unknown]
+expect:
+  errors:
+    - {rule: cell_status_unknown, where: admin.availability}

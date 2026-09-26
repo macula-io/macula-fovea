@@ -1,0 +1,6 @@
+describes: An na cell with no na_reason at all.
+base: valid_complete
+remove: []
+expect:
+  errors:
+    - {rule: na_without_reason, where: physical_natural.accountability}

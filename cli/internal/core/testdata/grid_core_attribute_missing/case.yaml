@@ -1,4 +1,6 @@
 describes: The header's core list omits accountability; the core five are fixed.
 base: valid_complete
 remove: []
-errors: [grid_core_attribute_missing]
+expect:
+  errors:
+    - {rule: grid_core_attribute_missing, where: fovea.yaml}

@@ -1,0 +1,5 @@
+describes: The lint-clean base declared under spec 0.2; same rules, the frozen 0.2 scorecard.
+base: valid_complete
+remove: []
+expect:
+  errors: []

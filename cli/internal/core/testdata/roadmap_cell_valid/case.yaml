@@ -1,4 +1,5 @@
 describes: A roadmap cell with definition, manifestations, a roadmap measure and a dated review_by lints clean.
 base: valid_complete
 remove: []
-errors: []
+expect:
+  errors: []

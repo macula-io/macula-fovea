@@ -1,4 +1,6 @@
 describes: A cell owner of "UNASSIGNED" with surrounding whitespace is still unassigned.
 base: valid_complete
 remove: []
-errors: [cell_owner_unassigned]
+expect:
+  errors:
+    - {rule: cell_owner_unassigned, where: admin.authenticity}

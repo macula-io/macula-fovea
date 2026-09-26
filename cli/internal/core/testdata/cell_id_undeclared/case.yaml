@@ -1,4 +1,6 @@
 describes: A cell whose id dot-joins a column the header never declared (spec 12 hard rule 2).
 base: valid_complete
 remove: []
-errors: [cell_id_undeclared]
+expect:
+  errors:
+    - {rule: cell_id_undeclared, where: x_shadow.integrity}

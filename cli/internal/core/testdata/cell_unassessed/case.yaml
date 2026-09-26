@@ -1,4 +1,6 @@
 describes: A present cell with status unassessed fails lint even with an owner and threat text (spec 00 status table).
 base: valid_complete
 remove: []
-errors: [cell_unassessed]
+expect:
+  errors:
+    - {rule: cell_unassessed, where: operate.integrity}

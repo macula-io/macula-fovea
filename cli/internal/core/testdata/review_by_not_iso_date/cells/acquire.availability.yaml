@@ -6,7 +6,9 @@ threat:
   manifestations:
     - acquire availability observed
 defense:
-  detection: []
+  detection:
+    - measure: acquire availability monitored
+      status: org
   countermeasures:
     - measure: acquire availability prevented later
       status: roadmap

@@ -5,7 +5,9 @@ threat:
   definition: deliver threatens availability
   manifestations: []
 defense:
-  detection: []
+  detection:
+    - measure: deliver availability monitored
+      status: org
   countermeasures:
     - measure: deliver availability prevented later
       status: roadmap

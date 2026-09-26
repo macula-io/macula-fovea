@@ -1,0 +1,6 @@
+describes: An assumed cell with an empty threat definition.
+base: valid_complete
+remove: []
+expect:
+  errors:
+    - {rule: definition_empty, where: deliver.confidentiality}

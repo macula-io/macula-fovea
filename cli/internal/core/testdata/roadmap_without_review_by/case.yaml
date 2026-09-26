@@ -1,4 +1,6 @@
 describes: A roadmap cell without review_by fails.
 base: valid_complete
 remove: []
-errors: [roadmap_without_review_by]
+expect:
+  errors:
+    - {rule: roadmap_without_review_by, where: acquire.integrity}

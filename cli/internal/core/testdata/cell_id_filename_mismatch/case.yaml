@@ -1,4 +1,8 @@
 describes: A cell file whose id does not match its file name; the grid position it names is then missing.
 base: valid_complete
 remove: []
-errors: [cell_id_filename_mismatch, cell_id_undeclared, grid_missing_cell]
+expect:
+  errors:
+    - {rule: cell_id_filename_mismatch, where: create.integrity.yaml}
+    - {rule: cell_id_undeclared, where: create.integrity.copy}
+    - {rule: grid_missing_cell, where: create.integrity}

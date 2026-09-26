@@ -1,0 +1,7 @@
+describes: A cell that is not valid YAML is reported, never silently dropped.
+base: valid_complete
+remove: []
+expect:
+  errors:
+    - {rule: cell_parse, where: at_rest.integrity.yaml}
+    - {rule: grid_missing_cell, where: at_rest.integrity}

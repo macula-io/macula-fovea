@@ -1,0 +1,6 @@
+describes: One cell of the declared grid has no file.
+base: valid_complete
+remove: [cells/decommission.availability.yaml]
+expect:
+  errors:
+    - {rule: grid_missing_cell, where: decommission.availability}

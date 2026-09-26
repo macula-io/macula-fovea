@@ -1,4 +1,6 @@
 describes: The header drops a spec column (decommission) and its cells; a header may not shrink the fixed grid.
 base: valid_complete
 remove: [cells/decommission.confidentiality.yaml, cells/decommission.integrity.yaml, cells/decommission.availability.yaml, cells/decommission.authenticity.yaml, cells/decommission.accountability.yaml]
-errors: [grid_missing_column]
+expect:
+  errors:
+    - {rule: grid_missing_column, where: fovea.yaml}

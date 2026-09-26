@@ -298,7 +298,9 @@ func LoadCells(dir string, h *Header) (map[string]*Cell, []string, []Finding) {
 	var f []Finding
 	ents, err := os.ReadDir(cellsDir)
 	if err != nil {
-		return out, files, append(f, errf("cells_dir_unreadable", cellsDir, "cannot read cells dir"))
+		// Reported against the header, where cells_dir is set and fixed, and
+		// independent of the directory the assessment happens to live in.
+		return out, files, append(f, errf("cells_dir_unreadable", "fovea.yaml", "cells_dir %q cannot be read: %v", h.CellsDir, err))
 	}
 	for _, e := range ents {
 		if e.IsDir() {

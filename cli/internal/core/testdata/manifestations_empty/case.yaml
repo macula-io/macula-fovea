@@ -1,0 +1,6 @@
+describes: An assumed cell with zero manifestations.
+base: valid_complete
+remove: []
+expect:
+  errors:
+    - {rule: manifestations_empty, where: deliver.authenticity}

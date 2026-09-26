@@ -1,0 +1,10 @@
+id: physical_natural.accountability
+status: na
+owner: fixture@example.org
+threat:
+  definition: ""
+  manifestations: []
+defense:
+  detection: []
+  countermeasures: []
+  recovery: []

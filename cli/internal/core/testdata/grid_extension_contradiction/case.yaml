@@ -1,4 +1,22 @@
 describes: The possession extension is enabled and also justified as disabled.
 base: valid_complete
 remove: []
-errors: [grid_extension_contradiction, grid_missing_cell]
+expect:
+  errors:
+    - {rule: grid_extension_contradiction, where: fovea.yaml}
+    - {rule: grid_missing_cell, where: acquire.possession}
+    - {rule: grid_missing_cell, where: admin.possession}
+    - {rule: grid_missing_cell, where: at_rest.possession}
+    - {rule: grid_missing_cell, where: create.possession}
+    - {rule: grid_missing_cell, where: decommission.possession}
+    - {rule: grid_missing_cell, where: deliver.possession}
+    - {rule: grid_missing_cell, where: external.possession}
+    - {rule: grid_missing_cell, where: in_motion.possession}
+    - {rule: grid_missing_cell, where: in_use.possession}
+    - {rule: grid_missing_cell, where: internal.possession}
+    - {rule: grid_missing_cell, where: machine_agent.possession}
+    - {rule: grid_missing_cell, where: operate.possession}
+    - {rule: grid_missing_cell, where: physical_natural.possession}
+    - {rule: grid_missing_cell, where: socio_legal.possession}
+    - {rule: grid_missing_cell, where: temporal.possession}
+    - {rule: grid_missing_cell, where: trusted_partner.possession}
