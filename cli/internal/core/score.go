@@ -68,7 +68,7 @@ type Metrics struct {
 func Score(dir string, jsonOut bool, stdout, stderr io.Writer) int {
 	h, cells, lf, err := Check(dir)
 	if err != nil {
-		fmt.Fprintln(stdout, err)
+		fmt.Fprintln(stderr, err)
 		return 1
 	}
 
@@ -88,7 +88,9 @@ func Score(dir string, jsonOut bool, stdout, stderr io.Writer) int {
 		printScore(stdout, m)
 	}
 	if lintErrs > 0 {
-		fmt.Fprintf(stdout, "note: %d lint error(s) — run: fovea lint %s\n", lintErrs, dir)
+		// stderr, never stdout: `score --json > score.json` must stay JSON
+		// on the runs where it matters most, the failing ones.
+		fmt.Fprintf(stderr, "note: %d lint error(s) — run: fovea lint %s\n", lintErrs, dir)
 		return 1
 	}
 	return 0
@@ -112,7 +114,7 @@ func computeMetrics(h *Header, cells map[string]*Cell, lintErrs int) Metrics {
 		if c == nil || c.Status == "unassessed" {
 			unassessed++
 		}
-		if c != nil && c.Status == "na" && c.NAReason == "" {
+		if c != nil && c.Status == "na" && !naJustified(c) {
 			naUnj++
 		}
 		if c != nil && c.Status == "roadmap" && c.ReviewBy != "" {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"time"
 )
 
 type Roll struct {
@@ -26,7 +27,7 @@ func Render(dir string, jsonOut, htmlOut bool, stdout, stderr io.Writer) int {
 	w := stdout
 	h, _, err := LoadHeader(dir)
 	if err != nil {
-		fmt.Fprintln(w, err)
+		fmt.Fprintln(stderr, err)
 		return 1
 	}
 	cells, _, _ := LoadCells(dir, h)
@@ -92,7 +93,24 @@ func renderV02(w io.Writer, h *Header, cells map[string]*Cell, jsonOut bool) int
 
 // ---- 0.3: coverage-aware grid + open gaps; worst-RAG is the invariant ----
 
-func renderV03(w io.Writer, h *Header, cells map[string]*Cell, jsonOut bool) int {
+// cellRAGv03 is cellRAG with spec v0.3's N/A rule: only a justified na is
+// grey. An na without a written reason is unfinished work and stays red.
+func cellRAGv03(c *Cell) string {
+	if c != nil && c.Status == "na" && !naJustified(c) {
+		return ragRed
+	}
+	return cellRAG(c)
+}
+
+// authored reports whether a cell counts toward a block's coverage: it
+// exists and is answered. unassessed and unjustified na are not answers.
+func authored(c *Cell) bool {
+	return c != nil && c.Status != "unassessed" && (c.Status != "na" || naJustified(c))
+}
+
+// rollV03 computes the v0.3 grid, coverage and open gaps. Markdown, JSON
+// and HTML all render this one value, so they cannot disagree.
+func rollV03(h *Header, cells map[string]*Cell, today time.Time) Roll {
 	r := Roll{
 		Version:  "0.3",
 		ByAttr:   map[string]string{},
@@ -108,48 +126,50 @@ func renderV03(w io.Writer, h *Header, cells map[string]*Cell, jsonOut bool) int
 		cov := map[string]string{}
 		for _, fam := range families {
 			worst := -1
-			authored, total := 0, 0
-			anyCol := false
+			done, total := 0, 0
 			for _, c := range cols {
 				if h.FamilyOf(c) != fam {
 					continue
 				}
-				anyCol = true
 				total++
-				id := c + "." + a
-				cell := cells[id]
-				if cell != nil && cell.Status != "unassessed" {
-					authored++
+				cell := cells[c+"."+a]
+				if authored(cell) {
+					done++
 				}
-				rg := cellRAG(cell)
+				rg := cellRAGv03(cell)
 				if rg == ragGrey {
 					continue // justified N/A: no threat surface, must not drag the block down
 				}
-				if r := ragRank(rg); r > worst {
-					worst = r
+				if rk := ragRank(rg); rk > worst {
+					worst = rk
 				}
 			}
-			if !anyCol {
+			switch {
+			case total == 0:
 				row[fam] = "·"
 				cov[fam] = "·"
-			} else {
-				if worst == -1 {
-					// every cell in the block is a justified N/A
-					row[fam] = fmt.Sprintf("- %d/%d", authored, total)
-					cov[fam] = fmt.Sprintf("%d/%d", authored, total)
-					continue
-				}
-				// Worst-RAG stays: one unassessed/missing cell keeps the block red.
-				row[fam] = fmt.Sprintf("%s %d/%d", ragLetter(worst), authored, total)
-				cov[fam] = fmt.Sprintf("%d/%d", authored, total)
+			case worst == -1:
+				// every cell in the block is a justified N/A
+				row[fam] = fmt.Sprintf("- %d/%d", done, total)
+				cov[fam] = fmt.Sprintf("%d/%d", done, total)
+			default:
+				// Worst-RAG stays: one unfinished cell keeps the block red.
+				row[fam] = fmt.Sprintf("%s %d/%d", ragLetter(worst), done, total)
+				cov[fam] = fmt.Sprintf("%d/%d", done, total)
 			}
 		}
 		r.GridV03[a] = row
 		r.Coverage[a] = cov
 	}
 	fillRollups(&r, attrs, r.GridV03)
-	r.OpenGaps = openGaps(h, cells)
+	r.OpenGaps = openGaps(h, cells, today)
 	r.MetricsNote = "RAG = worst cell in the block (invariant); n/total = authored cells; - = all cells justified N/A. Open gaps listed below carry the unfinished work."
+	return r
+}
+
+func renderV03(w io.Writer, h *Header, cells map[string]*Cell, jsonOut bool) int {
+	r := rollV03(h, cells, time.Now())
+	attrs := h.AttributesVM()
 
 	if jsonOut {
 		b, _ := json.MarshalIndent(r, "", "  ")
@@ -157,7 +177,7 @@ func renderV03(w io.Writer, h *Header, cells map[string]*Cell, jsonOut bool) int
 		return 0
 	}
 
-	fmt.Fprintf(w, "# Scorecard — %s (spec v0.3)\n\n", h.System)
+	fmt.Fprintf(w, "# Scorecard: %s (spec v0.3)\n\n", h.System)
 	fmt.Fprintln(w, "| attribute     | actors | lifecycle | data | environment |")
 	fmt.Fprintln(w, "|---|---|---|---|---|")
 	for _, a := range attrs {
@@ -219,24 +239,32 @@ func firstRag(s string) string {
 	return "·"
 }
 
-// openGaps names the unfinished work: missing cells, unassigned cells,
-// unjustified NAs, overdue roadmaps. The gap-info formerly implied by a red
-// wall, now stated as a list (spec v0.3).
-func openGaps(h *Header, cells map[string]*Cell) []string {
+// openGaps names the unfinished work (spec v0.3, 13): missing cells,
+// unassessed cells, unassigned owners, unjustified NAs and overdue
+// roadmaps. Each entry reads "<where>: <reason>". The list is complete;
+// it is what CI archives, so nothing is cut.
+func openGaps(h *Header, cells map[string]*Cell, today time.Time) []string {
 	var gaps []string
+	if unassigned(h.Owner) {
+		gaps = append(gaps, "fovea.yaml: owner unassigned")
+	}
 	for _, id := range h.ExpectedCells() {
 		c, ok := cells[id]
 		if !ok {
-			gaps = append(gaps, fmt.Sprintf("%s — missing cell", id))
+			gaps = append(gaps, id+": missing cell")
 			continue
 		}
-		switch c.Status {
-		case "unassessed":
-			gaps = append(gaps, fmt.Sprintf("%s — unassessed", id))
-		case "na":
-			if c.NAReason == "" {
-				gaps = append(gaps, fmt.Sprintf("%s — na without reason", id))
-			}
+		if c.Status == "unassessed" {
+			gaps = append(gaps, id+": unassessed")
+		}
+		if unassigned(c.Owner) {
+			gaps = append(gaps, id+": owner unassigned")
+		}
+		if c.Status == "na" && !naJustified(c) {
+			gaps = append(gaps, id+": na without reason")
+		}
+		if c.Status == "roadmap" && isOverdue(c, today) {
+			gaps = append(gaps, fmt.Sprintf("%s: roadmap overdue (review_by %s)", id, c.ReviewBy))
 		}
 	}
 	sort.Strings(gaps)
@@ -245,16 +273,11 @@ func openGaps(h *Header, cells map[string]*Cell) []string {
 
 func printOpenGaps(w io.Writer, gaps []string) {
 	if len(gaps) == 0 {
-		fmt.Fprintln(w, "## Open gaps — none. The grid is complete.")
+		fmt.Fprintln(w, "## Open gaps: none. The grid is complete.")
 		return
 	}
-	fmt.Fprintf(w, "## Open gaps — %d\n", len(gaps))
-	const capN = 40
-	for i, g := range gaps {
-		if i == capN {
-			fmt.Fprintf(w, "… and %d more\n", len(gaps)-capN)
-			break
-		}
+	fmt.Fprintf(w, "## Open gaps: %d\n", len(gaps))
+	for _, g := range gaps {
 		fmt.Fprintf(w, "- %s\n", g)
 	}
 }

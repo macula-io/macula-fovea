@@ -1,9 +1,12 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
+	"path/filepath"
 )
 
 const cellSkeleton = `id: %s
@@ -27,24 +30,38 @@ func Init(dir string, stdout, stderr io.Writer) int {
 	w := stdout
 	h, f, err := LoadHeader(dir)
 	if err != nil {
-		fmt.Fprintln(w, err)
+		fmt.Fprintln(stderr, err)
 		return 1
 	}
 	if len(f) > 0 {
-		fmt.Fprintln(w, "fovea init — header findings first:")
-		printFindings(w, f)
+		fmt.Fprintln(stderr, "fovea init: fix the header findings first")
+		printFindings(stderr, f)
 		return 1
 	}
-	cells, _, _ := LoadCells(dir, h)
+	cellsDir := filepath.Join(dir, h.CellsDir)
+	if err := os.MkdirAll(cellsDir, 0o755); err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
 	made, skipped := 0, 0
 	for _, id := range h.ExpectedCells() {
-		if _, ok := cells[id]; ok {
+		// O_EXCL: init only ever adds files. A cell that exists but does not
+		// parse is still someone's work and is never replaced by a skeleton.
+		fh, err := os.OpenFile(filepath.Join(cellsDir, id+".yaml"), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+		if errors.Is(err, fs.ErrExist) {
 			skipped++
 			continue
 		}
-		p := dir + "/" + h.CellsDir + id + ".yaml"
-		if err := os.WriteFile(p, []byte(fmt.Sprintf(cellSkeleton, id)), 0o644); err != nil {
-			fmt.Fprintln(w, err)
+		if err != nil {
+			fmt.Fprintln(stderr, err)
+			return 1
+		}
+		_, werr := fmt.Fprintf(fh, cellSkeleton, id)
+		if cerr := fh.Close(); werr == nil {
+			werr = cerr
+		}
+		if werr != nil {
+			fmt.Fprintln(stderr, werr)
 			return 1
 		}
 		made++
