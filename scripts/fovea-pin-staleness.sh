@@ -57,12 +57,26 @@ if [ "$sha" = "$ref" ]; then
   exit 0
 fi
 
-if [ -z "$created" ] ||
-  ! age_s=$(( $(jq -rn --arg n "$now" '$n | fromdateiso8601') - $(jq -rn --arg c "$created" '$c | fromdateiso8601') )) 2>/dev/null; then
+# A pin that is no release commit at all (a main commit, a fork) is not
+# "behind": it was never a release, and the fix is to pin one.
+if ! jq -e --arg r "$ref" 'any(.[]; (.name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$")) and .sha == $r)' "$tags" >/dev/null 2>&1; then
+  echo "::warning title=$title::pinned to $ref, which is not a release commit; pin a release. The newest is $name ($sha)."
+  exit 0
+fi
+
+# jq's fromdateiso8601 accepts only YYYY-MM-DDTHH:MM:SSZ. Each date is
+# parsed on its own, so an offset, fractional seconds or garbage leads to
+# the notice, never to an aborted script.
+created_s=""
+if [ -n "$created" ]; then
+  created_s="$(jq -rn --arg c "$created" '$c | fromdateiso8601' 2>/dev/null)" || created_s=""
+fi
+now_s="$(jq -rn --arg n "$now" '$n | fromdateiso8601' 2>/dev/null)" || now_s=""
+if [ -z "$created_s" ] || [ -z "$now_s" ]; then
   echo "::notice title=$title::the date of the newest release $name is unknown; staleness of pin $ref is unknown"
   exit 0
 fi
-age_days=$(( age_s / 86400 ))
+age_days=$(( (now_s - created_s) / 86400 ))
 
 if [ "$age_days" -gt "$grace_days" ]; then
   echo "::warning title=$title::pinned to $ref, which is not the newest release $name ($sha); $name is $age_days days old. Update the sha (Dependabot's github-actions ecosystem does this)."
