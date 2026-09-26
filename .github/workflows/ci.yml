@@ -18,9 +18,21 @@ jobs:
         working-directory: cli
     steps:
       - uses: actions/checkout@v4
+      # setup-go reads the whole ".tool-versions" line ("golang 1.27.0") as
+      # the version, so the version is taken out of the file here instead;
+      # .tool-versions stays the one place it is written.
+      - name: Go version from .tool-versions
+        working-directory: .
+        run: |
+          v="$(awk '$1 == "golang" { print $2 }' .tool-versions)"
+          if [ -z "$v" ]; then
+            echo "::error title=.tool-versions::no golang line"
+            exit 1
+          fi
+          echo "GO_VERSION=$v" >> "$GITHUB_ENV"
       - uses: actions/setup-go@v5
         with:
-          go-version-file: .tool-versions
+          go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: cli/go.sum
       - name: gofmt
         run: |
