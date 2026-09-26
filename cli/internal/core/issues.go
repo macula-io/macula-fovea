@@ -141,6 +141,11 @@ func RunIssues(o IssuesOpts, stdout, stderr io.Writer) int {
 	}
 	existing := map[string]Issue{}
 	listed := false
+	if token == "" {
+		// Only reachable with --dry-run: the "would open" lines below are
+		// computed against an empty tracker, and the reader must know it.
+		fmt.Fprintln(stderr, "no token: existing issues not consulted; decisions assume none exist")
+	}
 	if token != "" {
 		issues, err := g.ListIssues(markerLabel)
 		if err != nil {

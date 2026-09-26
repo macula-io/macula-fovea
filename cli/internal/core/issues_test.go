@@ -159,3 +159,17 @@ func TestGitHubClientHasATimeout(t *testing.T) {
 		t.Fatal("GitHub client has no timeout: a hung API call hangs CI forever")
 	}
 }
+
+// Without a token a dry run cannot list issues; its "would open" decisions
+// assume none exist, and it must say so.
+func TestDryRunWithoutTokenSaysIssuesWereNotConsulted(t *testing.T) {
+	t.Setenv("GITHUB_TOKEN", "")
+	gh := &fakeGitHub{}
+	code, _, errs := runIssues(t, materialize(t, "roadmap_cell_valid"), IssuesOpts{DryRun: true}, gh.serve(t))
+	if code != 0 {
+		t.Fatalf("exit %d", code)
+	}
+	if !strings.Contains(errs, "no token: existing issues not consulted; decisions assume none exist") {
+		t.Fatalf("stderr lacks the no-token notice: %q", errs)
+	}
+}
