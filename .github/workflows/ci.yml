@@ -59,6 +59,12 @@ jobs:
           persist-credentials: false
       - name: every third-party action is pinned by sha
         run: scripts/check-pinned-actions.sh
+      - name: pin staleness decisions (offline fixtures)
+        run: scripts/test-fovea-pin-staleness.sh
+      - name: release tag lookup (local fake API)
+        run: scripts/test-fovea-pin-tags.sh
+      - name: the Action step's ref discovery and failure handling
+        run: scripts/test-fovea-pin-self.sh
 
   # Runs this repo's own action.yml end to end against the lint-clean
   # fixture. The dogfood assessment is deliberately not linted here.

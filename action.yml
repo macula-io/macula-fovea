@@ -30,6 +30,18 @@ inputs:
 runs:
   using: "composite"
   steps:
+    # Every consumer run reports how old its pin of this Action is: a branch
+    # or tag ref warns; a sha more than 14 days behind the newest release
+    # warns and adds a job-summary line; an unknown answer is a notice. It
+    # never fails the job. Contexts arrive through env only.
+    - name: "Check this Action's pin"
+      shell: bash
+      env:
+        FOVEA_ACTION_REF: ${{ github.action_ref }}
+        FOVEA_ACTION_REPOSITORY: ${{ github.action_repository }}
+        FOVEA_TOKEN: ${{ github.token }}
+      run: bash "$GITHUB_ACTION_PATH/scripts/fovea-pin-self.sh"
+
     - name: "Setup Go ${{ inputs.go-version }}"
       uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
