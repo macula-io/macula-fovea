@@ -1,0 +1,50 @@
+# This exists so a change to the fovea lint cannot land unless it is
+# formatted, vetted, race-tested against the rule cases, and builds.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  cli:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cli
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: .tool-versions
+          cache-dependency-path: cli/go.sum
+      - name: gofmt
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "::error title=gofmt::not gofmt-clean: $unformatted"
+            exit 1
+          fi
+      - name: go vet
+        run: go vet ./...
+      - name: go test -race
+        run: go test -race -count=1 ./...
+      - name: build
+        run: go build -o fovea ./cmd/fovea
+
+  # Runs this repo's own action.yml end to end against the lint-clean
+  # fixture. The dogfood assessment is deliberately not linted here.
+  action:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        with:
+          dir: cli/internal/core/testdata/valid_complete
+          command: lint
+      - name: score.json is valid JSON
+        run: python3 -m json.tool fovea-artifacts/score.json > /dev/null
