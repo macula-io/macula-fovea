@@ -17,7 +17,9 @@ jobs:
       run:
         working-directory: cli
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       # setup-go reads the whole ".tool-versions" line ("golang 1.27.0") as
       # the version, so the version is taken out of the file here instead;
       # .tool-versions stays the one place it is written.
@@ -30,7 +32,7 @@ jobs:
             exit 1
           fi
           echo "GO_VERSION=$v" >> "$GITHUB_ENV"
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: cli/go.sum
@@ -48,12 +50,24 @@ jobs:
       - name: build
         run: go build -o fovea ./cmd/fovea
 
+  # The repo's shell scripts and the invariants they guard.
+  scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: every third-party action is pinned by sha
+        run: scripts/check-pinned-actions.sh
+
   # Runs this repo's own action.yml end to end against the lint-clean
   # fixture. The dogfood assessment is deliberately not linted here.
   action:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: ./
         with:
           dir: cli/internal/core/testdata/valid_complete

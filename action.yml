@@ -31,9 +31,13 @@ runs:
   using: "composite"
   steps:
     - name: "Setup Go ${{ inputs.go-version }}"
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
         go-version: ${{ inputs.go-version }}
+        # The Action's go.sum lives under the action path, never in the
+        # consumer's workspace, so setup-go's cache could only ever miss
+        # (and warn). The build is small; no cache.
+        cache: false
 
     - name: "Build fovea"
       shell: bash
