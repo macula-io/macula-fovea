@@ -170,6 +170,9 @@ updates:
       interval: weekly
 ```
 
+On self-hosted runners, use runner 2.327.1 or newer: the Action and the
+actions it pins run on Node 24.
+
 Every run of the Action checks its own pin. A branch or tag ref gets a
 warning. A sha more than 14 days behind the newest release gets a warning
 and a line in the job summary, which is how a Dependabot that stopped
