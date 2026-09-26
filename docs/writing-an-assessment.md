@@ -36,7 +36,9 @@ only as a boundary, or as an anchor you already registered.
 
 ## Phase 3 — Header
 
-Commit the regime: extensions enabled or justified-N/A, custom columns if any
+Commit the regime: every extension enabled or justified as disabled (lint
+fails a blank justification), all sixteen spec columns in their families,
+custom `x_` columns if any
 (this is the moment to declare `x_supply_chain` if you need it; you do not
 need it for most meshes — `create` and `acquire` cover it), assessment date,
 owner, team.
@@ -52,7 +54,8 @@ you didn't.
 
 ## Phase 5 — Score and review
 
-`fovea score` (planned) computes the roll-up; review it warm, three months
+`fovea score` computes the headline metrics and `fovea render` the roll-up
+with its open gaps; review it warm, three months
 later, with someone who was not the writer. Any block that is *strictly*
 green is either masterfully engineered or a working demonstration of
 self-validation. Ask for the sources.

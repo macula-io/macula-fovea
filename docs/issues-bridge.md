@@ -9,7 +9,18 @@ Every issue fovea creates carries a marker in its body —
 `<!-- fovea-cell: operate.confidentiality -->`. On re-run the command lists
 its own issues (label `fovea`), matches on the marker, updates bodies and
 labels in place, closes issues whose cells left `roadmap`, and opens only
-genuinely new ones. Issues without the marker are never touched.
+genuinely new ones. Issues without the marker are never touched, and pull
+requests (which the GitHub issues listing also returns) are always skipped.
+
+**It refuses to act on a broken load.** If the header or any cell fails to
+load (a YAML typo, a wrong `cells_dir`), the command prints the findings
+and exits 1 without touching GitHub. Acting anyway would read the broken
+cell as "no longer roadmap" and close its issue.
+
+**Disclosure.** Each issue publishes a threat and the gap in its defense.
+In a public repository that is public disclosure of an unmitigated
+weakness; run the sync against a private tracker (`--repo`) when that
+matters.
 
 **The body is a work package**, not a pointer: cell id and file path, status,
 owner, `review_by`, the threat definition, the manifestations (what done must
@@ -30,6 +41,10 @@ fovea issues <dir> --dry-run          # decisions only, no writes
 fovea issues <dir> --check            # the trap (below)
 fovea issues <dir>                    # the real sync (needs GITHUB_TOKEN)
 ```
+
+Without a token and without `--dry-run` the command exits 1: a missing CI
+secret must fail the job, not pass as a silent no-op. Every API call times
+out after 30 seconds.
 
 Options: `--repo owner/name` (default: detect from `git remote origin`),
 `--token` (default: `$GITHUB_TOKEN`).

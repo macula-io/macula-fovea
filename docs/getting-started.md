@@ -30,8 +30,11 @@ assessment_date: 2026-09-25
 owner: you@example.org          # lint fails on "unassigned"
 attributes:
   core: [confidentiality, integrity, availability, authenticity, accountability]
-  enabled: []
-columns:
+  enabled: [possession]            # extensions: possession, utility
+  disabled_justifications:         # every extension not enabled needs one
+    utility: >-
+      An intact but useless asset is an availability failure here.
+columns:                           # all 16 spec columns, each in its family
   actors: [internal, external, trusted_partner, machine_agent]
   lifecycle: [create, acquire, deliver, operate, admin, decommission]
   data: [at_rest, in_motion, in_use]
@@ -50,8 +53,11 @@ on it and everything on it must be under some column) — see
 fovea init security/fovea
 ```
 
-96 skeletons appear, each `unassessed`. Refusing to run until the header
-owner is claimed is the framework being armed, not broken.
+96 skeletons appear (80 core cells plus 16 for `possession`), each
+`unassessed`; `init` creates `cells/` if needed and never overwrites an
+existing file. Refusing to run until the header is clean (owner claimed,
+grid complete, extensions justified) is the framework being armed, not
+broken.
 
 ## 3. Write cells
 
@@ -67,9 +73,11 @@ Template: [`templates/cell.yaml`](../templates/cell.yaml).
 fovea lint security/fovea
 ```
 
-Expect, per unfinished skeleton: *empty threat definition*, *zero
-manifestations*, *owner is unassigned*. Three errors per cell until it's
-written and claimed. `lint` exits 0 only with no findings.
+Expect two errors per untouched skeleton: `cell_unassessed` and
+`cell_owner_unassigned`. Once a cell is answered (`assumed`, `assessed` or
+`roadmap`) it also needs a definition and at least one manifestation.
+`lint` exits 0 only with no findings; [reference.md](reference.md) lists
+every rule code.
 
 ## 5. Score and render
 
@@ -77,6 +85,7 @@ written and claimed. `lint` exits 0 only with no findings.
 fovea score security/fovea --json   # headline metrics, machine-readable
 fovea render security/fovea         # markdown scorecard
 fovea render security/fovea --html  # GitHub job-summary scorecard (emoji RAG)
+fovea render security/fovea --json  # grid, coverage and open gaps for CI
 ```
 
 ## 6. Wire CI

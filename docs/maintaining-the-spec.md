@@ -27,15 +27,21 @@ The spec, not any assessment, is what gets versioned.
 
 ## The roadmap ahead
 
-| Step | Deliverable | Dependent on |
+| Step | Deliverable | State |
 |---|---|---|
-| v0.2 | This spec | — |
-| v0.3 | The grid *closure* becomes enforceable: built-in extensions beyond possession/utility as sanctioned options | Evidence from ≥2 assessments that one extension is the same shape everywhere |
-| v0.4 | The scorecard gets a *conformance class*: "level 1 = zeros on lint", "level 2 = no unassigned owners", "level 3 = no unjustified N/A" | enough assessments to see one's own cultural failure modes |
+| v0.2 | Axes, attributes, cell schema, scorecard, instantiation protocol | released 2026-09-25, archival |
+| v0.3 | Coverage-aware scorecard: `authored/total` per block and an open-gaps list | released 2026-09-25, current |
+| v0.4 | Executable evidence on measures ([proposal](../spec/proposals/v0.4-evidence/README.md)) | proposed, not normative |
 
-## The future repo boundary
+## Spec, reference implementation, conformance
 
-Anything the spec says that the code doesn't enforce yet is *pending*. The
-CLI will be developed in this repo; no mesh-served surface (`mcl-fovea`)
-until two real assessment directories pass the lint without being modified
-to pass.
+The `fovea` CLI in `cli/` is the reference implementation: its `lint` is
+what the spec means by "the lint". Every rule it enforces has a case under
+`cli/internal/core/testdata/<rule>/`, an assessment plus the exact findings
+expected, and those cases seed a language-neutral conformance suite. Any
+other implementation (`mcl-fovea`, the mesh-served observer in
+`macula-services`) must pass the same cases. A spec change that adds or
+alters a rule lands with its case and the CLI change in the same PR.
+
+Corrections to a released version are errata: marked as such in the text,
+dated, and never a change of meaning (see `spec/README.md`).

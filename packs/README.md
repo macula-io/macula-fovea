@@ -3,7 +3,9 @@
 A **pack** is a set of pre-filled, reviewed cells for a recurring technology
 class — a way to start an assessment with *reasonable defaults for the
 terrain*, not a blank grid. Packs live here and are referenced from cells by
-`(pack, cell-id)` tuples; the CLI merges them at `fovea init` time.
+`(pack, cell-id)` tuples. No pack exists yet and the CLI does not merge
+packs: `fovea init` writes only `unassessed` skeletons. The format below is
+the intended shape.
 
 ## Format
 
