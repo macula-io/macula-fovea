@@ -22,7 +22,7 @@ func renderV03HTML(w io.Writer, h *Header, cells map[string]*Cell, jsonOut bool)
 		return 0
 	}
 
-	fmt.Fprintln(w, "<h3>fovea scorecard — "+h.System+" (spec v0.3)</h3>")
+	fmt.Fprintln(w, "<h3>fovea scorecard: "+h.System+" (spec v0.3)</h3>")
 	fmt.Fprintln(w, "<table>")
 	fmt.Fprintln(w, "<tr><th>attribute</th><th>actors</th><th>lifecycle</th><th>data</th><th>environment</th></tr>")
 	for _, a := range attrs {

@@ -35,9 +35,9 @@ func Lint(dir string, github bool, stdout, stderr io.Writer) int {
 		return lintGithub(stdout, dir, h, f)
 	}
 
-	fmt.Fprintf(stdout, "fovea lint — %s (%d cells expected)\n", h.System, len(h.ExpectedCells()))
+	fmt.Fprintf(stdout, "fovea lint: %s (%d cells expected)\n", h.System, len(h.ExpectedCells()))
 	if len(f) == 0 {
-		fmt.Fprintln(stdout, "  clean — no findings")
+		fmt.Fprintln(stdout, "  clean: no findings")
 		return 0
 	}
 	errs, warns := printFindings(stdout, f)
@@ -183,7 +183,7 @@ func lintEachCell(h *Header, cells map[string]*Cell) []Finding {
 					}
 				}
 				if allOrg {
-					f = append(f, errf("assessed_all_org", id, "status assessed but every measure is org — cell is org-managed, not assessed"))
+					f = append(f, errf("assessed_all_org", id, "status assessed but every measure is org; the cell is org-managed, not assessed"))
 				}
 			}
 		}
@@ -214,7 +214,7 @@ func lintDuplicates(cells map[string]*Cell) []Finding {
 		for j := i + 1; j < len(ids); j++ {
 			sim := jaccard(toks[ids[i]], toks[ids[j]])
 			if sim >= 0.85 {
-				f = append(f, errf("definition_copy_paste", ids[i], "threat definition ≥85%% similar to %s (%.2f) — copy-paste", ids[j], sim))
+				f = append(f, errf("definition_copy_paste", ids[i], "threat definition ≥85%% similar to %s (%.2f), copy-paste", ids[j], sim))
 			}
 		}
 	}

@@ -30,7 +30,7 @@ func ragRank(r string) int {
 }
 
 // cellRAG implements the RAG mapping in spec 13-scorecard. Missing cells
-// count as unassessed (Red) — the grid closure rule, scored.
+// count as unassessed (Red): the grid closure rule, scored.
 func cellRAG(c *Cell) string {
 	if c == nil {
 		return ragRed
@@ -90,7 +90,7 @@ func Score(dir string, jsonOut bool, stdout, stderr io.Writer) int {
 	if lintErrs > 0 {
 		// stderr, never stdout: `score --json > score.json` must stay JSON
 		// on the runs where it matters most, the failing ones.
-		fmt.Fprintf(stderr, "note: %d lint error(s) — run: fovea lint %s\n", lintErrs, dir)
+		fmt.Fprintf(stderr, "note: %d lint error(s); run: fovea lint %s\n", lintErrs, dir)
 		return 1
 	}
 	return 0
@@ -180,7 +180,7 @@ func pct(n, d int) float64 {
 }
 
 func printScore(w io.Writer, m Metrics) {
-	fmt.Fprintf(w, "fovea score — %s\n", m.System)
+	fmt.Fprintf(w, "fovea score: %s\n", m.System)
 	fmt.Fprintf(w, "  expected cells      %d\n", m.ExpectedCells)
 	fmt.Fprintf(w, "  present cells       %d (missing %d)\n", m.PresentCells, m.MissingCells)
 	fmt.Fprintf(w, "  pct_unassessed      %.1f%%\n", 100*m.PctUnassessed)

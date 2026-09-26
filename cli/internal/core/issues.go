@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// IssuesOpts — the fovea issues surface. Phase 1 (sync) + phase 2 (--check)
+// IssuesOpts is the fovea issues surface. Phase 1 (sync) + phase 2 (--check)
 // of spec/proposals/github-issues.
 type IssuesOpts struct {
 	Dir    string
@@ -166,7 +166,7 @@ func RunIssues(o IssuesOpts, stdout, stderr io.Writer) int {
 	return issuesSync(w, stderr, o, h, roadmap, existing, g, owner, repo)
 }
 
-// issuesCheck — the anti-theater trap: a roadmap cell whose linked issue is
+// issuesCheck is the anti-theater trap: a roadmap cell whose linked issue is
 // closed while the cell is unchanged fails the build.
 func issuesCheck(w, stderr io.Writer, roadmap map[string]*Cell, existing map[string]Issue, listed bool) int {
 	if !listed {
@@ -176,7 +176,7 @@ func issuesCheck(w, stderr io.Writer, roadmap map[string]*Cell, existing map[str
 	errs := 0
 	for id, c := range roadmap {
 		if iss, ok := existing[id]; ok && iss.State == "closed" {
-			fmt.Fprintf(stderr, "error: roadmap cell %s has closed issue #%d — do the work and update the cell, or reopen the issue\n", id, iss.Number)
+			fmt.Fprintf(stderr, "error: roadmap cell %s has closed issue #%d: do the work and update the cell, or reopen the issue\n", id, iss.Number)
 			errs++
 		}
 		if iss, ok := existing[id]; ok && isOverdue(c, time.Now()) && !hasLabel(iss, labelOverdue) {
@@ -238,7 +238,7 @@ func issuesSync(w, stderr io.Writer, o IssuesOpts, h *Header, roadmap map[string
 			}
 			opened++
 		case iss.State == "closed":
-			fmt.Fprintf(w, "untouched #%d (%s): closed but cell still roadmap — run: fovea issues --check\n", iss.Number, id)
+			fmt.Fprintf(w, "untouched #%d (%s): closed but cell still roadmap; run: fovea issues --check\n", iss.Number, id)
 			untouched++
 		default:
 			changed := iss.Body != body || !sameLabels(iss, labels)

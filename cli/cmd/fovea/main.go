@@ -10,7 +10,7 @@ import (
 	"github.com/macula-io/macula-fovea/cli/internal/core"
 )
 
-const usage = `fovea — CyberSec-as-Code CLI (spec v0.3)
+const usage = `fovea: CyberSec-as-Code CLI (spec v0.3)
 
 usage: fovea <command> [dir]
 

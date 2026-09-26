@@ -78,7 +78,7 @@ func renderV02(w io.Writer, h *Header, cells map[string]*Cell, jsonOut bool) int
 		return 0
 	}
 
-	fmt.Fprintf(w, "# Scorecard — %s\n\n", h.System)
+	fmt.Fprintf(w, "# Scorecard: %s\n\n", h.System)
 	fmt.Fprintln(w, "| attribute     | actors | lifecycle | data | environment |")
 	fmt.Fprintln(w, "|---|---|---|---|---|")
 	for _, a := range attrs {

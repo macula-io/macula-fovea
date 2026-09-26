@@ -66,9 +66,9 @@ func Init(dir string, stdout, stderr io.Writer) int {
 		}
 		made++
 	}
-	fmt.Fprintf(w, "fovea init — created %d cell skeleton(s), %d already present\n", made, skipped)
+	fmt.Fprintf(w, "fovea init: created %d cell skeleton(s), %d already present\n", made, skipped)
 	if made > 0 {
-		fmt.Fprintln(w, "every skeleton starts as status: unassessed / owner: unassigned — both are lint errors until written and claimed.")
+		fmt.Fprintln(w, "every skeleton starts as status: unassessed / owner: unassigned; both are lint errors until written and claimed.")
 	}
 	return 0
 }

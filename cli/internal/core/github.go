@@ -160,7 +160,7 @@ func parseRemoteURL(s string) (string, string, error) {
 	if i := strings.Index(s, "://"); i >= 0 {
 		s = s[i+3:] // ssh://git@host/owner/repo -> git@host/owner/repo
 	}
-	// scp-like git@host:owner/repo — the colon separates host from path,
+	// scp-like git@host:owner/repo: the colon separates host from path,
 	// and never appears after a "/" in this form. The https scheme colon was
 	// already removed with "://" above.
 	if i := strings.Index(s, ":"); i >= 0 && !strings.Contains(s[:i], "/") {
