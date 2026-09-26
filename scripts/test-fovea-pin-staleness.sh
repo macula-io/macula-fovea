@@ -18,7 +18,7 @@ for d in "$here"/testdata/pin-staleness/*/; do
   touch "$work/summary"
   ok=1
   [ "$code" -eq 0 ] || { echo "FAIL $name: exit $code, want 0 (the check never fails a consumer's job)"; cat "$work/err"; ok=0; }
-  if ! diff -u "$d/expect.out" "$work/out" > "$work/diff.out"; then
+  if ! diff -u "$d/expect.stdout" "$work/out" > "$work/diff.out"; then
     echo "FAIL $name: stdout"; cat "$work/diff.out"; ok=0
   fi
   if ! diff -u "$d/expect.summary" "$work/summary" > "$work/diff.summary"; then

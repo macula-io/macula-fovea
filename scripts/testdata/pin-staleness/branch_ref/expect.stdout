@@ -1,0 +1,1 @@
+::warning title=fovea action pin::the fovea Action is used at ref 'main', a branch or tag, not a 40-character commit sha. Pin it: uses: macula-io/macula-fovea@<sha> # vX.Y.Z
