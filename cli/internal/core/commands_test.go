@@ -94,15 +94,15 @@ func TestOpenGapsNameUnassignedOwnersAndOverdueRoadmaps(t *testing.T) {
 }
 
 func TestOpenGapsAreNotCapped(t *testing.T) {
-	dir := materialize(t, "cells_dir_unreadable") // 80 missing cells
+	dir := materialize(t, "cells_dir_unreadable") // 80 missing cells + the header finding
 	var md, html, errb bytes.Buffer
 	Render(dir, false, false, &md, &errb)
 	Render(dir, false, true, &html, &errb)
-	if n := strings.Count(md.String(), "\n- "); n != 80 {
-		t.Errorf("markdown lists %d gaps, want all 80", n)
+	if n := strings.Count(md.String(), "\n- "); n != 81 {
+		t.Errorf("markdown lists %d gaps, want all 81", n)
 	}
-	if n := strings.Count(html.String(), "<li>"); n != 80 {
-		t.Errorf("html lists %d gaps, want all 80", n)
+	if n := strings.Count(html.String(), "<li>"); n != 81 {
+		t.Errorf("html lists %d gaps, want all 81", n)
 	}
 }
 
@@ -143,5 +143,46 @@ func TestInitNeverOverwritesAnUnparseableCell(t *testing.T) {
 	after, _ := os.ReadFile(p)
 	if !bytes.Equal(before, after) {
 		t.Fatalf("init overwrote an existing cell file:\n%s", after)
+	}
+}
+
+// A header that fails lint must not render as a clean scorecard: render
+// reports the findings on stderr, exits 1, and the archived open gaps name
+// the header problem.
+func TestRenderFailsOnLintErrorsAndNamesHeaderGaps(t *testing.T) {
+	dir := materialize(t, "grid_missing_column")
+	var out, errb bytes.Buffer
+	if code := Render(dir, false, false, &out, &errb); code != 1 {
+		t.Errorf("render exit %d, want 1", code)
+	}
+	if !strings.Contains(errb.String(), "decommission") {
+		t.Errorf("stderr does not name the missing column: %q", errb.String())
+	}
+	if !strings.Contains(out.String(), "fovea.yaml: ") || !strings.Contains(out.String(), "decommission") {
+		t.Errorf("open gaps do not carry the header finding:\n%s", out.String())
+	}
+	r := renderJSON(t, dir)
+	if !hasGap(r.OpenGaps, "fovea.yaml", "decommission") {
+		t.Errorf("json open_gaps miss the header finding: %v", r.OpenGaps)
+	}
+}
+
+func TestRenderHTMLOnV02HeaderIsHTML(t *testing.T) {
+	dir := materialize(t, "valid_complete_v0_2")
+	var out, errb bytes.Buffer
+	if code := Render(dir, false, true, &out, &errb); code != 0 {
+		t.Fatalf("exit %d: %s", code, errb.String())
+	}
+	if !strings.Contains(out.String(), "<table>") || strings.Contains(out.String(), "| attribute") {
+		t.Fatalf("render --html on a 0.2 header is not HTML:\n%s", out.String())
+	}
+}
+
+func TestRenderHTMLCarriesTheLintErrorCount(t *testing.T) {
+	dir := materialize(t, "roadmap_without_review_by")
+	var out, errb bytes.Buffer
+	Render(dir, false, true, &out, &errb)
+	if !strings.Contains(out.String(), "<b>lint errors</b> 1") {
+		t.Fatalf("html metrics do not show the one lint error:\n%s", out.String())
 	}
 }
