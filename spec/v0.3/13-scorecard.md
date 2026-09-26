@@ -5,14 +5,16 @@ can be read in one page, and so CI can read it in one invocation.
 
 ## Semantics
 
-Per cell, a RAG state is computed from `status`:
+Per cell, a RAG state is computed from `status` (and, for `na`, from
+whether `na_reason` is written; see the erratum below):
 
 | Status | RAG |
 |---|---|
 | `assessed` | Green |
 | `assumed` | Amber |
 | `roadmap` | Amber, flagged with its `review_by` |
-| `na` | Grey |
+| `na` with `na_reason` | Grey |
+| `na` without `na_reason` | Red; lint has already failed the assessment |
 | `unassessed` | Red; lint has already failed the assessment |
 
 Roll-ups are computed along both axes:
@@ -49,10 +51,16 @@ v0.2 implied but never showed:
    red — the red invariant is about unfinished work, not about cells that
    were honestly judged empty.
 
-   > **Erratum (2026-09-26).** An `na` cell whose `na_reason` is missing or
-   > blank is not a justified N/A: lint fails it and `na_unjustified` counts
-   > it. The grid treats it the same way, as unfinished work (red, not
-   > authored), so it can no longer render as a fully covered `-` block.
+   > **Erratum (2026-09-26).** The RAG table above read "`na` | Grey" for
+   > every `na` cell. It now splits `na` by whether `na_reason` is written
+   > (blank counts as missing). An `na` cell without a reason is not a
+   > justified N/A: lint fails it and `na_unjustified` counts it, and the
+   > grid treats it the same way, as unfinished work (red, not authored), so
+   > it can no longer render as a fully covered `-` block. This is an
+   > erratum, not a version bump, because it changes no final reading: a
+   > lint-failing assessment has no final reading, and an assessment that
+   > passes lint has no `na` without a reason. The v0.2 reading is
+   > unchanged.
 
 ## Headline metrics (unchanged from v0.2)
 
