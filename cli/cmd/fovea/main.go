@@ -21,6 +21,7 @@ commands:
   score   <dir>   lint, then compute the scorecard metrics
   render  <dir>   print the scorecard as a markdown grid
   issues  <dir>   sync roadmap/overdue cells to GitHub issues
+  --version       the tool version and the spec versions it reads
 
 dir defaults to the current directory. flags: --json on score and render;
 --format md|html|json (or --html) on render; --github on lint;
@@ -65,6 +66,11 @@ func parseIssuesFlags(args []string) core.IssuesOpts {
 	return o
 }
 
+// version is the tool's version, the one place it is written. Release
+// builds bake it in: go build -ldflags "-X main.version=0.1.0". It is not
+// the spec version; the spec versions this build reads come from core.
+var version = "dev"
+
 // knownFlag lists every flag of init, lint, score and render; takes says
 // which command accepts which. A known flag on the wrong command is refused
 // rather than ignored: `lint --json` must not look like it produced JSON.
@@ -93,6 +99,9 @@ func run(argv []string, stdout, stderr io.Writer) int {
 	case argv[0] == "-h" || argv[0] == "--help":
 		// Help that was asked for is output, not an error.
 		fmt.Fprintln(stdout, usage)
+		return 0
+	case argv[0] == "--version":
+		fmt.Fprintf(stdout, "fovea %s (reads spec %s)\n", version, strings.Join(core.SpecVersions(), ", "))
 		return 0
 	case argv[0] == "--help-issues":
 		fmt.Fprintln(stdout, issuesUsage)

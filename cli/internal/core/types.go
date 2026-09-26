@@ -77,6 +77,16 @@ var families = []string{"actors", "lifecycle", "data", "environment"}
 // reading (spec/README: versions are forked, not branched).
 var knownVersions = map[string]bool{"0.2": true, "0.3": true}
 
+// SpecVersions lists the spec versions this build reads, ascending.
+func SpecVersions() []string {
+	out := make([]string, 0, len(knownVersions))
+	for v := range knownVersions {
+		out = append(out, v)
+	}
+	sort.Strings(out)
+	return out
+}
+
 var coreFive = []string{"confidentiality", "integrity", "availability", "authenticity", "accountability"}
 
 // DeclaredColumns returns flattened declared columns (families in canonical order).

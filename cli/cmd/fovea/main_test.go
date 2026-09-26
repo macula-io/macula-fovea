@@ -59,3 +59,18 @@ func TestAcceptedFlagsStillWork(t *testing.T) {
 		}
 	}
 }
+
+// The tool version (baked at build, "dev" by default) is reported apart
+// from the spec versions the tool reads.
+func TestVersionReportsToolAndSpecVersionsApart(t *testing.T) {
+	code, out, _ := exit("--version")
+	if code != 0 || out != "fovea dev (reads spec 0.2, 0.3)\n" {
+		t.Fatalf("exit %d, stdout %q", code, out)
+	}
+	saved := version
+	version = "0.1.0"
+	defer func() { version = saved }()
+	if _, out, _ := exit("--version"); out != "fovea 0.1.0 (reads spec 0.2, 0.3)\n" {
+		t.Fatalf("baked version not reported: %q", out)
+	}
+}
