@@ -39,11 +39,20 @@ defense:
     - measure: ...
       status: roadmap
 review_by: 2027-03-31              # ISO date; required for roadmap status
-na_reason: >                       # required iff status: na
+# na_reason: required iff status: na; on an answered cell it may carry the
+# hard-rule-1 argument that detection is structurally impossible
+na_reason: >
   ...
 notes: >
   ...
 ```
+
+> **Erratum (2026-09-26).** The `na_reason` comment above read only
+> "required iff status: na", which contradicted hard rule 1 below: an
+> answered cell (`assumed`, `assessed`, `roadmap`) may leave detection empty
+> when its `na_reason` argues that detection is structurally impossible.
+> `na_reason` is required iff the status is `na`; on an answered cell it is
+> optional and carries that argument.
 
 ## Measure statuses (claim strength)
 
