@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -64,25 +65,53 @@ func parseIssuesFlags(args []string) core.IssuesOpts {
 	return o
 }
 
+// knownFlag lists every flag of init, lint, score and render; takes says
+// which command accepts which. A known flag on the wrong command is refused
+// rather than ignored: `lint --json` must not look like it produced JSON.
+var knownFlag = map[string]bool{
+	"--json": true, "--github": true, "--html": true,
+	"--format=md": true, "--format=html": true, "--format=json": true,
+}
+
+var takes = map[string]map[string]bool{
+	"init":   {},
+	"lint":   {"--github": true},
+	"score":  {"--json": true},
+	"render": {"--json": true, "--html": true, "--format=md": true, "--format=html": true, "--format=json": true},
+}
+
 func main() {
-	if len(os.Args) < 2 || os.Args[1] == "-h" || os.Args[1] == "--help" {
-		fmt.Fprintln(os.Stderr, usage)
-		os.Exit(2)
-	}
-	if os.Args[1] == "--help-issues" {
-		fmt.Fprintln(os.Stderr, issuesUsage)
-		os.Exit(0)
+	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
+}
+
+// run is the whole CLI minus the process: args exclude the program name.
+func run(argv []string, stdout, stderr io.Writer) int {
+	switch {
+	case len(argv) < 1:
+		fmt.Fprintln(stderr, usage)
+		return 2
+	case argv[0] == "-h" || argv[0] == "--help":
+		// Help that was asked for is output, not an error.
+		fmt.Fprintln(stdout, usage)
+		return 0
+	case argv[0] == "--help-issues":
+		fmt.Fprintln(stdout, issuesUsage)
+		return 0
 	}
 	dir := "."
 	jsonOut := false
 	githubOut := false
 	htmlOut := false
-	args := os.Args[2:]
+	args := argv[1:]
 	for i := 0; i < len(args); i++ {
 		a := args[i]
 		if a == "--format" && i+1 < len(args) {
 			i++
 			a = "--format=" + args[i]
+		}
+		if strings.HasPrefix(a, "--") && argv[0] != "issues" && knownFlag[a] && !takes[argv[0]][a] {
+			fmt.Fprintf(stderr, "fovea: %s does not take %s\n\n%s\n", argv[0], a, usage)
+			return 2
 		}
 		switch a {
 		case "--json", "--format=json":
@@ -94,26 +123,26 @@ func main() {
 		case "--format=md":
 			// markdown is render's default output
 		default:
-			if strings.HasPrefix(a, "--") && os.Args[1] != "issues" {
-				fmt.Fprintf(os.Stderr, "fovea: unknown flag %s\n\n%s\n", a, usage)
-				os.Exit(2)
+			if strings.HasPrefix(a, "--") && argv[0] != "issues" {
+				fmt.Fprintf(stderr, "fovea: unknown flag %s\n\n%s\n", a, usage)
+				return 2
 			}
 			dir = a
 		}
 	}
-	switch os.Args[1] {
+	switch argv[0] {
 	case "init":
-		os.Exit(core.Init(dir, os.Stdout, os.Stderr))
+		return core.Init(dir, stdout, stderr)
 	case "lint":
-		os.Exit(core.Lint(dir, githubOut, os.Stdout, os.Stderr))
+		return core.Lint(dir, githubOut, stdout, stderr)
 	case "score":
-		os.Exit(core.Score(dir, jsonOut, os.Stdout, os.Stderr))
+		return core.Score(dir, jsonOut, stdout, stderr)
 	case "render":
-		os.Exit(core.Render(dir, jsonOut, htmlOut, os.Stdout, os.Stderr))
+		return core.Render(dir, jsonOut, htmlOut, stdout, stderr)
 	case "issues":
-		os.Exit(core.RunIssues(parseIssuesFlags(os.Args[2:]), os.Stdout, os.Stderr))
+		return core.RunIssues(parseIssuesFlags(argv[1:]), stdout, stderr)
 	default:
-		fmt.Fprintln(os.Stderr, usage)
-		os.Exit(2)
+		fmt.Fprintln(stderr, usage)
+		return 2
 	}
 }
