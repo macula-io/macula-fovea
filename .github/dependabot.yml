@@ -1,0 +1,12 @@
+# This exists so the sha pins in action.yml and the workflows, and the Go
+# module dependencies of the CLI, are proposed for update instead of rotting.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: gomod
+    directory: /cli
+    schedule:
+      interval: weekly
