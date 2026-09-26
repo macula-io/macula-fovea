@@ -208,6 +208,8 @@ func naJustified(c *Cell) bool {
 
 // lintDuplicates flags cells whose threat definitions look copy-pasted
 // (00-overview anti-theater rule: copy-paste is the primary symptom).
+// The finding is symmetric: both cells of a similar pair carry it, one per
+// pair they belong to, so no implementation has to agree on an ordering.
 func lintDuplicates(cells map[string]*Cell) []Finding {
 	var f []Finding
 	toks := map[string]map[string]bool{}
@@ -223,7 +225,9 @@ func lintDuplicates(cells map[string]*Cell) []Finding {
 		for j := i + 1; j < len(ids); j++ {
 			sim := jaccard(toks[ids[i]], toks[ids[j]])
 			if sim >= 0.85 {
-				f = append(f, errf("definition_copy_paste", ids[i], "threat definition ≥85%% similar to %s (%.2f), copy-paste", ids[j], sim))
+				f = append(f,
+					errf("definition_copy_paste", ids[i], "threat definition ≥85%% similar to %s (%.2f), copy-paste", ids[j], sim),
+					errf("definition_copy_paste", ids[j], "threat definition ≥85%% similar to %s (%.2f), copy-paste", ids[i], sim))
 			}
 		}
 	}

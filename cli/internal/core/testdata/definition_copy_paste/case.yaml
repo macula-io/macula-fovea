@@ -1,6 +1,7 @@
-describes: Two cells whose threat definitions are at least 85% similar were filled, not written.
+describes: Two cells whose threat definitions are at least 85% similar were filled, not written; both cells carry the finding.
 base: valid_complete
 remove: []
 expect:
   errors:
     - {rule: definition_copy_paste, where: at_rest.confidentiality}
+    - {rule: definition_copy_paste, where: internal.confidentiality}

@@ -70,7 +70,7 @@ format is described in `cli/README.md`).
 | `measure_status_unknown` | a measure status is not `by_design`, `roadmap` or `org` |
 | `by_design_without_source` | a `by_design` measure has no `source` |
 | `assessed_all_org` | an `assessed` cell whose measures are all `org` |
-| `definition_copy_paste` | two threat definitions are >=85% similar (word-set Jaccard) |
+| `definition_copy_paste` | two threat definitions are >=85% similar (word-set Jaccard); reported on both cells of the pair |
 
 An overdue `review_by` is not a lint error; the scorecard reports it
 (`overdue_roadmap`, `oldest_review_by`, and the v0.3 open gaps).
