@@ -79,7 +79,7 @@ after it.
 `action.yml` at the repo root wraps the CLI for consumers:
 
 ```yaml
-- uses: macula-io/macula-fovea@main
+- uses: macula-io/macula-fovea@<40-char sha of the release> # v0.1.0
   with:
     dir: security/fovea
     command: lint          # lint | score | render | issues
@@ -95,7 +95,7 @@ summary. Inputs reach the shell only through environment variables. Upload
 the artifacts with:
 
 ```yaml
-- uses: actions/upload-artifact@v4
+- uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
   if: always()
   with:
     name: fovea-artifacts
@@ -106,7 +106,8 @@ the artifacts with:
 
 ```bash
 cd cli
-go build -o fovea ./cmd/fovea
+go build -o fovea ./cmd/fovea                              # fovea --version: dev
+go build -ldflags "-X main.version=0.1.0" -o fovea ./cmd/fovea   # a release build
 go test -race ./...
 ```
 

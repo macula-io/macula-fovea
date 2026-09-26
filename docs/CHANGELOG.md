@@ -1,10 +1,24 @@
 # Changelog
 
-All notable spec versions and tooling milestones.
+Two version lines live in this repository and are kept apart:
 
-## Unreleased (tooling; spec stays 0.3)
+- **Tool** versions (`fovea` CLI and GitHub Action): `vX.Y.Z` git tags,
+  reported by `fovea --version`. Consumers pin these by commit sha.
+- **Spec** versions (`spec/vX.Y/`): declared by an assessment header as
+  `fovea: "X.Y"`. A tool release says which spec versions it reads.
 
-The lint now enforces the spec it implements, and every rule is tested.
+## Tool 0.1.0 (2026-09-26), reads spec 0.2 and 0.3
+
+The first tool release. The lint now enforces the spec it implements, and
+every rule is tested.
+
+- **Releases and pinning.** `fovea --version` reports the tool version
+  (baked at build, `dev` otherwise) apart from the spec versions it reads.
+  Every consumer run of the Action checks its own pin: a branch or tag ref
+  warns; a sha more than 14 days behind the newest release warns and adds
+  a job-summary line; an unknown answer is a notice, never a failure.
+  This repo pins its own third-party actions by sha, checks that in CI,
+  and runs Dependabot for actions and Go modules.
 
 - **Fixed grid.** A header declares exactly the 16 spec columns, each in its
   own family, plus `x_` extensions; the core five attributes; only
@@ -55,7 +69,7 @@ The lint now enforces the spec it implements, and every rule is tested.
 - Spec v0.3 13: the RAG table itself now splits `na` by whether
   `na_reason` is written (erratum).
 
-## [0.3] — 2026-09-25
+## Spec 0.3 (2026-09-25)
 
 - Scorecard becomes coverage-aware: per-block `authored/total` next to the
   (unchanged) worst-RAG letter, plus an open-gaps section naming missing /
@@ -65,14 +79,14 @@ The lint now enforces the spec it implements, and every rule is tested.
 - GitHub Action writes artifacts: score JSON + rendered scorecard into an
   artifact directory, plus a step-summary block.
 
-## [0.2] — 2026-09-25
+## Spec 0.2 (2026-09-25)
 
 - Initial versioned spec (`spec/v0.2/`): 00-overview, 10-axes, 11-attributes, 12-cell-schema, 13-scorecard, 14-instantiation.
-- JSON Schemas for header and cell (removed later: unused, see Unreleased).
+- JSON Schemas for header and cell (removed in tool 0.1.0: unused).
 - Dogfood assessment skeleton for `macula-mesh-realm`.
 - `packs/` and `templates/` structure.
 
-## [0.1] — never released
+## Spec 0.1 (never released)
 
 Unnumbered earlier drafts circulated as documents; v0.2 is the first versioned
 specification.

@@ -128,7 +128,9 @@ spec/mappings/        # cross-walks to NIST CSF, ISO 27001, ATT&CK, STRIDE
 cli/                  # the fovea binary: init / lint / score / render / issues
   internal/core/testdata/  # one assessment per lint rule, with expected findings
 action.yml            # GitHub Action wrapping the CLI
-.github/workflows/    # this repo's CI: gofmt, vet, race tests, build, action run
+.github/workflows/    # this repo's CI: gofmt, vet, race tests, build, scripts, action run
+.github/dependabot.yml  # weekly updates for the pinned actions and Go modules
+scripts/              # the Action's pin-staleness check and pin guard, with offline tests
 docs/                 # operator-facing: getting started, reference, reading, writing
 packs/                # the intended format for pre-filled cell packs (none yet)
 templates/            # a cell skeleton to copy by hand
@@ -136,6 +138,44 @@ assets/               # brand artwork (dark/light logo variants)
 assessments/
   macula-mesh-realm/  # dogfood #1: header, landscape, anchors, one seed cell
 ```
+
+## Releases and pinning
+
+The tool (the `fovea` CLI and the GitHub Action) is released as `vX.Y.Z`
+git tags; `fovea --version` prints the tool version and the spec versions
+it reads. The tool version and the spec version are separate lines: tool
+0.1.0 reads assessments written to spec v0.2 and v0.3. See
+[`docs/CHANGELOG.md`](docs/CHANGELOG.md).
+
+Use the Action pinned to the full commit sha of a release, with the tag as
+a comment, never `@main` or a bare tag (both can move under you):
+
+```yaml
+- uses: macula-io/macula-fovea@<40-char sha of the release> # v0.1.0
+  with:
+    dir: security/fovea
+    command: lint
+```
+
+Resolve the sha of a tag with
+`gh api repos/macula-io/macula-fovea/commits/v0.1.0 --jq .sha`, and let
+Dependabot keep the pin current. In `.github/dependabot.yml`:
+
+```yaml
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+```
+
+Every run of the Action checks its own pin. A branch or tag ref gets a
+warning. A sha more than 14 days behind the newest release gets a warning
+and a line in the job summary, which is how a Dependabot that stopped
+working shows up in your own CI. When the check cannot tell (no network,
+rate limit, no releases yet) it says so in a notice. It never fails the
+job.
 
 ## Relationship to other repos
 
