@@ -1,0 +1,16 @@
+id: operate.confidentiality
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: operate threatens confidentiality
+  manifestations:
+    - operate confidentiality observed
+defense:
+  detection:
+    - measure: operate confidentiality monitored
+      status: org
+  countermeasures:
+    - measure: operate confidentiality prevented
+      status: by_design
+      source: fixture
+  recovery: []

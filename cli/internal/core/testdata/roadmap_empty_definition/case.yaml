@@ -1,0 +1,4 @@
+describes: A roadmap cell with an empty threat definition fails; roadmap cells obey the content rules.
+base: valid_complete
+remove: []
+errors: [definition_empty]

@@ -1,0 +1,16 @@
+id: trusted_partner.authenticity
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: trusted_partner threatens authenticity
+  manifestations:
+    - trusted_partner authenticity observed
+defense:
+  detection:
+    - measure: trusted_partner authenticity monitored
+      status: org
+  countermeasures:
+    - measure: trusted_partner authenticity prevented
+      status: by_design
+      source: fixture
+  recovery: []

@@ -1,0 +1,11 @@
+id: operate.integrity
+status: unassessed
+owner: fixture@example.org
+threat:
+  definition: operate threatens integrity
+  manifestations:
+    - operate integrity observed
+defense:
+  detection: []
+  countermeasures: []
+  recovery: []

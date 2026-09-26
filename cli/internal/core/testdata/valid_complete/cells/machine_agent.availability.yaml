@@ -1,0 +1,16 @@
+id: machine_agent.availability
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: machine_agent threatens availability
+  manifestations:
+    - machine_agent availability observed
+defense:
+  detection:
+    - measure: machine_agent availability monitored
+      status: org
+  countermeasures:
+    - measure: machine_agent availability prevented
+      status: by_design
+      source: fixture
+  recovery: []

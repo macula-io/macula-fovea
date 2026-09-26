@@ -1,0 +1,16 @@
+id: at_rest.availability
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: at_rest threatens availability
+  manifestations:
+    - at_rest availability observed
+defense:
+  detection:
+    - measure: at_rest availability monitored
+      status: org
+  countermeasures:
+    - measure: at_rest availability prevented
+      status: by_design
+      source: fixture
+  recovery: []

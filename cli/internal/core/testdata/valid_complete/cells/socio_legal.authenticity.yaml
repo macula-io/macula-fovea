@@ -1,0 +1,16 @@
+id: socio_legal.authenticity
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: socio_legal threatens authenticity
+  manifestations:
+    - socio_legal authenticity observed
+defense:
+  detection:
+    - measure: socio_legal authenticity monitored
+      status: org
+  countermeasures:
+    - measure: socio_legal authenticity prevented
+      status: by_design
+      source: fixture
+  recovery: []

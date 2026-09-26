@@ -1,0 +1,16 @@
+id: operate.integrity
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: operate threatens integrity
+  manifestations:
+    - operate integrity observed
+defense:
+  detection:
+    - measure: operate integrity monitored
+      status: org
+  countermeasures:
+    - measure: operate integrity prevented
+      status: by_design
+      source: fixture
+  recovery: []

@@ -1,0 +1,16 @@
+id: in_motion.integrity
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: in_motion threatens integrity
+  manifestations:
+    - in_motion integrity observed
+defense:
+  detection:
+    - measure: in_motion integrity monitored
+      status: org
+  countermeasures:
+    - measure: in_motion integrity prevented
+      status: by_design
+      source: fixture
+  recovery: []

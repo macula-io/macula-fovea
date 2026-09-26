@@ -1,0 +1,16 @@
+id: create.accountability
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: create threatens accountability
+  manifestations:
+    - create accountability observed
+defense:
+  detection:
+    - measure: create accountability monitored
+      status: org
+  countermeasures:
+    - measure: create accountability prevented
+      status: by_design
+      source: fixture
+  recovery: []

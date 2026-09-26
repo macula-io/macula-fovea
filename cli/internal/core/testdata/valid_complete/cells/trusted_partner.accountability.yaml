@@ -1,0 +1,16 @@
+id: trusted_partner.accountability
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: trusted_partner threatens accountability
+  manifestations:
+    - trusted_partner accountability observed
+defense:
+  detection:
+    - measure: trusted_partner accountability monitored
+      status: org
+  countermeasures:
+    - measure: trusted_partner accountability prevented
+      status: by_design
+      source: fixture
+  recovery: []

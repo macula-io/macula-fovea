@@ -1,0 +1,16 @@
+id: decommission.availability
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: decommission threatens availability
+  manifestations:
+    - decommission availability observed
+defense:
+  detection:
+    - measure: decommission availability monitored
+      status: org
+  countermeasures:
+    - measure: decommission availability prevented
+      status: by_design
+      source: fixture
+  recovery: []

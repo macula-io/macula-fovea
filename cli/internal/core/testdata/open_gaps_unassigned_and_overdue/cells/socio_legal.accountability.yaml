@@ -1,0 +1,16 @@
+id: socio_legal.accountability
+status: assumed
+owner: unassigned
+threat:
+  definition: socio_legal threatens accountability
+  manifestations:
+    - socio_legal accountability observed
+defense:
+  detection:
+    - measure: socio_legal accountability monitored
+      status: org
+  countermeasures:
+    - measure: socio_legal accountability prevented
+      status: by_design
+      source: fixture
+  recovery: []

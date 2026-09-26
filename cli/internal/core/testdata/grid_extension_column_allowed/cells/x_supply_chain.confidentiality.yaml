@@ -1,0 +1,13 @@
+id: x_supply_chain.confidentiality
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: supply chain threatens confidentiality
+  manifestations:
+    - supply chain confidentiality observed
+defense:
+  detection:
+    - measure: supply chain confidentiality monitored
+      status: org
+  countermeasures: []
+  recovery: []

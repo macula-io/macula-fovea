@@ -1,0 +1,16 @@
+fovea: "0.3"
+system: fixture-valid-complete
+assessment_date: 2026-09-26
+owner: fixture@example.org
+attributes:
+  core: [confidentiality, integrity, availability, authenticity]
+  enabled: []
+  disabled_justifications:
+    possession: Fixture hardware cannot be carried away by an adversary.
+    utility: Fixture assets carry no semantics beyond availability.
+columns:
+  actors: [internal, external, trusted_partner, machine_agent]
+  lifecycle: [create, acquire, deliver, operate, admin, decommission]
+  data: [at_rest, in_motion, in_use]
+  environment: [physical_natural, socio_legal, temporal]
+cells_dir: cells/

@@ -1,0 +1,4 @@
+describes: The header invents a column (banana) without the x_ prefix; its cells are expected and missing too.
+base: valid_complete
+remove: []
+errors: [grid_column_unknown, grid_missing_cell]

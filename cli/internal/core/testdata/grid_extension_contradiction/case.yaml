@@ -1,0 +1,4 @@
+describes: The possession extension is enabled and also justified as disabled.
+base: valid_complete
+remove: []
+errors: [grid_extension_contradiction, grid_missing_cell]

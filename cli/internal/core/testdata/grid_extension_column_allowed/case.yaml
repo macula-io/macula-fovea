@@ -1,0 +1,4 @@
+describes: An x_-prefixed extension column, declared in a family and fully celled, lints clean.
+base: valid_complete
+remove: []
+errors: []

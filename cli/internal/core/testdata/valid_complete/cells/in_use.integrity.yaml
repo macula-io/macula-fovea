@@ -1,0 +1,16 @@
+id: in_use.integrity
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: in_use threatens integrity
+  manifestations:
+    - in_use integrity observed
+defense:
+  detection:
+    - measure: in_use integrity monitored
+      status: org
+  countermeasures:
+    - measure: in_use integrity prevented
+      status: by_design
+      source: fixture
+  recovery: []

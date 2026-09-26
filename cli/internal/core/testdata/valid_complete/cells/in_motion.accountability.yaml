@@ -1,0 +1,16 @@
+id: in_motion.accountability
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: in_motion threatens accountability
+  manifestations:
+    - in_motion accountability observed
+defense:
+  detection:
+    - measure: in_motion accountability monitored
+      status: org
+  countermeasures:
+    - measure: in_motion accountability prevented
+      status: by_design
+      source: fixture
+  recovery: []

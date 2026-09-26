@@ -1,0 +1,16 @@
+id: acquire.confidentiality
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: acquire threatens confidentiality
+  manifestations:
+    - acquire confidentiality observed
+defense:
+  detection:
+    - measure: acquire confidentiality monitored
+      status: org
+  countermeasures:
+    - measure: acquire confidentiality prevented
+      status: by_design
+      source: fixture
+  recovery: []

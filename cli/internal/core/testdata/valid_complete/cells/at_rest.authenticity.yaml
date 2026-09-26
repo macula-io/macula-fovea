@@ -1,0 +1,16 @@
+id: at_rest.authenticity
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: at_rest threatens authenticity
+  manifestations:
+    - at_rest authenticity observed
+defense:
+  detection:
+    - measure: at_rest authenticity monitored
+      status: org
+  countermeasures:
+    - measure: at_rest authenticity prevented
+      status: by_design
+      source: fixture
+  recovery: []

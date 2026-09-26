@@ -1,0 +1,16 @@
+id: acquire.accountability
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: acquire threatens accountability
+  manifestations:
+    - acquire accountability observed
+defense:
+  detection:
+    - measure: acquire accountability monitored
+      status: org
+  countermeasures:
+    - measure: acquire accountability prevented
+      status: by_design
+      source: fixture
+  recovery: []

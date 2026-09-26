@@ -22,12 +22,12 @@ func allMeasures(c *Cell) (out []Measure) {
 	return
 }
 
-// Lint enforces spec v0.2's anti-theater and schema rules (00-overview,
+// Lint enforces the anti-theater and cell rules of spec v0.2 and v0.3 (00-overview,
 // 12-cell-schema, 13-scorecard) against an assessment directory.
 func Lint(dir string, github bool, stdout, stderr io.Writer) int {
 	h, _, f, err := Check(dir)
 	if err != nil {
-		fmt.Fprintln(stdout, err)
+		fmt.Fprintln(stderr, err)
 		return 1
 	}
 
@@ -126,27 +126,43 @@ func lintEachCell(h *Header, cells map[string]*Cell) []Finding {
 		if !statuses[c.Status] {
 			f = append(f, errf("cell_status_unknown", id, "unknown status %q", c.Status))
 		}
-		if c.Owner == "" || c.Owner == "unassigned" {
+		if unassigned(c.Owner) {
 			f = append(f, errf("cell_owner_unassigned", id, "owner is unassigned"))
 		}
 		switch c.Status {
+		case "unassessed":
+			// Spec 00 status table: unassessed is not allowed at final, and
+			// lint is what "final" means. A present cell must be answered.
+			f = append(f, errf("cell_unassessed", id, "status unassessed: the cell exists but nobody has answered it"))
 		case "na":
-			if strings.TrimSpace(c.NAReason) == "" {
+			if !naJustified(c) {
 				f = append(f, errf("na_without_reason", id, "status na without na_reason"))
 			}
-		case "roadmap":
-			if c.ReviewBy == "" {
-				f = append(f, errf("roadmap_without_review_by", id, "status roadmap without review_by"))
-			} else if _, err := time.Parse("2006-01-02", c.ReviewBy); err != nil {
-				f = append(f, errf("review_by_not_iso_date", id, "review_by %q is not an ISO date", c.ReviewBy))
-			}
-		default:
+		case "roadmap", "assumed", "assessed":
+			// Content rules hold for every answered cell, roadmap included:
+			// a roadmap cell is a work package and must say what the work is.
 			if strings.TrimSpace(c.Threat.Definition) == "" {
 				f = append(f, errf("definition_empty", id, "empty threat definition"))
 			}
 			if len(c.Threat.Manifestations) == 0 {
 				f = append(f, errf("manifestations_empty", id, "zero manifestations"))
 			}
+		}
+		hasRoadmapMeasure := false
+		for _, m := range allMeasures(c) {
+			hasRoadmapMeasure = hasRoadmapMeasure || m.Status == "roadmap"
+		}
+		switch {
+		case strings.TrimSpace(c.ReviewBy) != "":
+			if _, err := time.Parse("2006-01-02", c.ReviewBy); err != nil {
+				f = append(f, errf("review_by_not_iso_date", id, "review_by %q is not an ISO date", c.ReviewBy))
+			}
+		case c.Status == "roadmap":
+			f = append(f, errf("roadmap_without_review_by", id, "status roadmap without review_by"))
+		case hasRoadmapMeasure:
+			// Spec 12 measure statuses: a roadmap measure requires review_by
+			// on the cell, whatever the cell's own status.
+			f = append(f, errf("roadmap_measure_without_review_by", id, "roadmap measure without review_by on the cell"))
 		}
 		for _, m := range allMeasures(c) {
 			if !measureStatuses[m.Status] {
@@ -173,6 +189,12 @@ func lintEachCell(h *Header, cells map[string]*Cell) []Finding {
 		}
 	}
 	return f
+}
+
+// naJustified is the one test of "na with a written reason" that lint,
+// score and render all use: whitespace is not a reason.
+func naJustified(c *Cell) bool {
+	return strings.TrimSpace(c.NAReason) != ""
 }
 
 // lintDuplicates flags cells whose threat definitions look copy-pasted

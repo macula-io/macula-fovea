@@ -1,0 +1,16 @@
+id: physical_natural.integrity
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: physical_natural threatens integrity
+  manifestations:
+    - physical_natural integrity observed
+defense:
+  detection:
+    - measure: physical_natural integrity monitored
+      status: org
+  countermeasures:
+    - measure: physical_natural integrity prevented
+      status: by_design
+      source: fixture
+  recovery: []

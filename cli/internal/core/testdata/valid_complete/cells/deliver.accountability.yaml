@@ -1,0 +1,16 @@
+id: deliver.accountability
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: deliver threatens accountability
+  manifestations:
+    - deliver accountability observed
+defense:
+  detection:
+    - measure: deliver accountability monitored
+      status: org
+  countermeasures:
+    - measure: deliver accountability prevented
+      status: by_design
+      source: fixture
+  recovery: []

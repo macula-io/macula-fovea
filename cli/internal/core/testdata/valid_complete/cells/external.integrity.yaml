@@ -1,0 +1,16 @@
+id: external.integrity
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: external threatens integrity
+  manifestations:
+    - external integrity observed
+defense:
+  detection:
+    - measure: external integrity monitored
+      status: org
+  countermeasures:
+    - measure: external integrity prevented
+      status: by_design
+      source: fixture
+  recovery: []

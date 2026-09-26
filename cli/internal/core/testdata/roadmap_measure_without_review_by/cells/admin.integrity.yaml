@@ -1,0 +1,15 @@
+id: admin.integrity
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: admin threatens integrity
+  manifestations:
+    - admin integrity observed
+defense:
+  detection:
+    - measure: admin integrity monitored
+      status: org
+  countermeasures: []
+  recovery:
+    - measure: admin integrity restored later
+      status: roadmap

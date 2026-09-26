@@ -1,0 +1,16 @@
+id: acquire.availability
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: acquire threatens availability
+  manifestations:
+    - acquire availability observed
+defense:
+  detection:
+    - measure: acquire availability monitored
+      status: org
+  countermeasures:
+    - measure: acquire availability prevented
+      status: by_design
+      source: fixture
+  recovery: []

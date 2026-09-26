@@ -1,0 +1,14 @@
+id: deliver.integrity
+status: roadmap
+owner: fixture@example.org
+threat:
+  definition: ""
+  manifestations:
+    - deliver integrity observed
+defense:
+  detection: []
+  countermeasures:
+    - measure: deliver integrity prevented later
+      status: roadmap
+  recovery: []
+review_by: "2099-01-01"

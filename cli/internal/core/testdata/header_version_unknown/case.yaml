@@ -1,0 +1,4 @@
+describes: The header declares a spec version this implementation does not know.
+base: valid_complete
+remove: []
+errors: [header_version_unknown]

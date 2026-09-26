@@ -1,0 +1,16 @@
+id: socio_legal.integrity
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: socio_legal threatens integrity
+  manifestations:
+    - socio_legal integrity observed
+defense:
+  detection:
+    - measure: socio_legal integrity monitored
+      status: org
+  countermeasures:
+    - measure: socio_legal integrity prevented
+      status: by_design
+      source: fixture
+  recovery: []

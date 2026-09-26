@@ -1,0 +1,16 @@
+id: in_motion.confidentiality
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: in_motion threatens confidentiality
+  manifestations:
+    - in_motion confidentiality observed
+defense:
+  detection:
+    - measure: in_motion confidentiality monitored
+      status: org
+  countermeasures:
+    - measure: in_motion confidentiality prevented
+      status: by_design
+      source: fixture
+  recovery: []

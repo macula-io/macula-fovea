@@ -1,0 +1,16 @@
+id: in_use.confidentiality
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: in_use threatens confidentiality
+  manifestations:
+    - in_use confidentiality observed
+defense:
+  detection:
+    - measure: in_use confidentiality monitored
+      status: org
+  countermeasures:
+    - measure: in_use confidentiality prevented
+      status: by_design
+      source: fixture
+  recovery: []

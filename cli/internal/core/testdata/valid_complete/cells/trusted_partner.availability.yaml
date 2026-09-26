@@ -1,0 +1,16 @@
+id: trusted_partner.availability
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: trusted_partner threatens availability
+  manifestations:
+    - trusted_partner availability observed
+defense:
+  detection:
+    - measure: trusted_partner availability monitored
+      status: org
+  countermeasures:
+    - measure: trusted_partner availability prevented
+      status: by_design
+      source: fixture
+  recovery: []

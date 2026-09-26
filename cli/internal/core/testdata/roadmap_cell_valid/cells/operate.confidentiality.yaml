@@ -1,0 +1,17 @@
+id: operate.confidentiality
+status: roadmap
+owner: fixture@example.org
+threat:
+  definition: operate threatens confidentiality
+  manifestations:
+    - operate confidentiality observed
+defense:
+  detection:
+    - measure: operate confidentiality monitored
+      status: org
+  countermeasures:
+    - measure: operate confidentiality prevented later
+      status: roadmap
+  recovery: []
+review_by: "2099-01-01"
+notes: The gap is scheduled.

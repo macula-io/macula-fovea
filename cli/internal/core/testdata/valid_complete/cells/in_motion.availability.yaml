@@ -1,0 +1,16 @@
+id: in_motion.availability
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: in_motion threatens availability
+  manifestations:
+    - in_motion availability observed
+defense:
+  detection:
+    - measure: in_motion availability monitored
+      status: org
+  countermeasures:
+    - measure: in_motion availability prevented
+      status: by_design
+      source: fixture
+  recovery: []

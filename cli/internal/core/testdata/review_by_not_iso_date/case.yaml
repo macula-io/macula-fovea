@@ -1,0 +1,4 @@
+describes: review_by must be an ISO date (YYYY-MM-DD).
+base: valid_complete
+remove: []
+errors: [review_by_not_iso_date]

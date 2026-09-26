@@ -1,0 +1,16 @@
+id: decommission.integrity
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: decommission threatens integrity
+  manifestations:
+    - decommission integrity observed
+defense:
+  detection:
+    - measure: decommission integrity monitored
+      status: org
+  countermeasures:
+    - measure: decommission integrity prevented
+      status: by_design
+      source: fixture
+  recovery: []

@@ -1,0 +1,16 @@
+id: deliver.integrity
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: deliver threatens integrity
+  manifestations:
+    - deliver integrity observed
+defense:
+  detection:
+    - measure: deliver integrity monitored
+      status: org
+  countermeasures:
+    - measure: deliver integrity prevented
+      status: by_design
+      source: fixture
+  recovery: []

@@ -1,0 +1,16 @@
+id: decommission.accountability
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: decommission threatens accountability
+  manifestations:
+    - decommission accountability observed
+defense:
+  detection:
+    - measure: decommission accountability monitored
+      status: org
+  countermeasures:
+    - measure: decommission accountability prevented
+      status: by_design
+      source: fixture
+  recovery: []

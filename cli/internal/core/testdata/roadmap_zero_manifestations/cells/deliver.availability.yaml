@@ -1,0 +1,13 @@
+id: deliver.availability
+status: roadmap
+owner: fixture@example.org
+threat:
+  definition: deliver threatens availability
+  manifestations: []
+defense:
+  detection: []
+  countermeasures:
+    - measure: deliver availability prevented later
+      status: roadmap
+  recovery: []
+review_by: "2099-01-01"

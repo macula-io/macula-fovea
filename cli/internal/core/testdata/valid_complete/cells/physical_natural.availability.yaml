@@ -1,0 +1,16 @@
+id: physical_natural.availability
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: physical_natural threatens availability
+  manifestations:
+    - physical_natural availability observed
+defense:
+  detection:
+    - measure: physical_natural availability monitored
+      status: org
+  countermeasures:
+    - measure: physical_natural availability prevented
+      status: by_design
+      source: fixture
+  recovery: []

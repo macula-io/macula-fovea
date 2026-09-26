@@ -1,0 +1,16 @@
+id: trusted_partner.integrity
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: trusted_partner threatens integrity
+  manifestations:
+    - trusted_partner integrity observed
+defense:
+  detection:
+    - measure: trusted_partner integrity monitored
+      status: org
+  countermeasures:
+    - measure: trusted_partner integrity prevented
+      status: by_design
+      source: fixture
+  recovery: []

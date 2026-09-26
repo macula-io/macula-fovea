@@ -1,0 +1,4 @@
+describes: The header names a cells_dir that does not exist yet; lint reports it, init creates it.
+base: valid_complete
+remove: []
+errors: [cells_dir_unreadable, grid_missing_cell]

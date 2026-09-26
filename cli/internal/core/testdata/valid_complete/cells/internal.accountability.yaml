@@ -1,0 +1,16 @@
+id: internal.accountability
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: internal threatens accountability
+  manifestations:
+    - internal accountability observed
+defense:
+  detection:
+    - measure: internal accountability monitored
+      status: org
+  countermeasures:
+    - measure: internal accountability prevented
+      status: by_design
+      source: fixture
+  recovery: []

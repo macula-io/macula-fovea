@@ -1,0 +1,4 @@
+describes: The header owner is "Unassigned" with odd case and whitespace; the check is normalised.
+base: valid_complete
+remove: []
+errors: [header_owner_unassigned]

@@ -1,0 +1,14 @@
+id: acquire.availability
+status: roadmap
+owner: fixture@example.org
+threat:
+  definition: acquire threatens availability
+  manifestations:
+    - acquire availability observed
+defense:
+  detection: []
+  countermeasures:
+    - measure: acquire availability prevented later
+      status: roadmap
+  recovery: []
+review_by: next spring

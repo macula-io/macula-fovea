@@ -1,0 +1,16 @@
+id: trusted_partner.confidentiality
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: trusted_partner threatens confidentiality
+  manifestations:
+    - trusted_partner confidentiality observed
+defense:
+  detection:
+    - measure: trusted_partner confidentiality monitored
+      status: org
+  countermeasures:
+    - measure: trusted_partner confidentiality prevented
+      status: by_design
+      source: fixture
+  recovery: []

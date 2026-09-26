@@ -1,0 +1,16 @@
+id: internal.availability
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: internal threatens availability
+  manifestations:
+    - internal availability observed
+defense:
+  detection:
+    - measure: internal availability monitored
+      status: org
+  countermeasures:
+    - measure: internal availability prevented
+      status: by_design
+      source: fixture
+  recovery: []

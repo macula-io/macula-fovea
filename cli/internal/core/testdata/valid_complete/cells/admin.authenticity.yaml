@@ -1,0 +1,16 @@
+id: admin.authenticity
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: admin threatens authenticity
+  manifestations:
+    - admin authenticity observed
+defense:
+  detection:
+    - measure: admin authenticity monitored
+      status: org
+  countermeasures:
+    - measure: admin authenticity prevented
+      status: by_design
+      source: fixture
+  recovery: []

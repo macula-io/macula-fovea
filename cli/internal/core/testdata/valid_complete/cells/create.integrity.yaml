@@ -1,0 +1,16 @@
+id: create.integrity
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: create threatens integrity
+  manifestations:
+    - create integrity observed
+defense:
+  detection:
+    - measure: create integrity monitored
+      status: org
+  countermeasures:
+    - measure: create integrity prevented
+      status: by_design
+      source: fixture
+  recovery: []

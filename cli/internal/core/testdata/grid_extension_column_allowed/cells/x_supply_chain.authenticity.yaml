@@ -1,0 +1,13 @@
+id: x_supply_chain.authenticity
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: supply chain threatens authenticity
+  manifestations:
+    - supply chain authenticity observed
+defense:
+  detection:
+    - measure: supply chain authenticity monitored
+      status: org
+  countermeasures: []
+  recovery: []

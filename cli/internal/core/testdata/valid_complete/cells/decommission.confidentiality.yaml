@@ -1,0 +1,16 @@
+id: decommission.confidentiality
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: decommission threatens confidentiality
+  manifestations:
+    - decommission confidentiality observed
+defense:
+  detection:
+    - measure: decommission confidentiality monitored
+      status: org
+  countermeasures:
+    - measure: decommission confidentiality prevented
+      status: by_design
+      source: fixture
+  recovery: []

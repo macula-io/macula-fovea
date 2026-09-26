@@ -1,0 +1,16 @@
+id: temporal.integrity
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: temporal threatens integrity
+  manifestations:
+    - temporal integrity observed
+defense:
+  detection:
+    - measure: temporal integrity monitored
+      status: org
+  countermeasures:
+    - measure: temporal integrity prevented
+      status: by_design
+      source: fixture
+  recovery: []

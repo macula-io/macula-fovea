@@ -1,0 +1,16 @@
+id: in_use.accountability
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: in_use threatens accountability
+  manifestations:
+    - in_use accountability observed
+defense:
+  detection:
+    - measure: in_use accountability monitored
+      status: org
+  countermeasures:
+    - measure: in_use accountability prevented
+      status: by_design
+      source: fixture
+  recovery: []

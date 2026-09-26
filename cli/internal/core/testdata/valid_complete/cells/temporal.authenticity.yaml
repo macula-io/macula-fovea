@@ -1,0 +1,16 @@
+id: temporal.authenticity
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: temporal threatens authenticity
+  manifestations:
+    - temporal authenticity observed
+defense:
+  detection:
+    - measure: temporal authenticity monitored
+      status: org
+  countermeasures:
+    - measure: temporal authenticity prevented
+      status: by_design
+      source: fixture
+  recovery: []

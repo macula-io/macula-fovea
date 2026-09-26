@@ -1,0 +1,16 @@
+id: external.accountability
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: external threatens accountability
+  manifestations:
+    - external accountability observed
+defense:
+  detection:
+    - measure: external accountability monitored
+      status: org
+  countermeasures:
+    - measure: external accountability prevented
+      status: by_design
+      source: fixture
+  recovery: []

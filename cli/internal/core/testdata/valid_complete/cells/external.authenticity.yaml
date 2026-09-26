@@ -1,0 +1,16 @@
+id: external.authenticity
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: external threatens authenticity
+  manifestations:
+    - external authenticity observed
+defense:
+  detection:
+    - measure: external authenticity monitored
+      status: org
+  countermeasures:
+    - measure: external authenticity prevented
+      status: by_design
+      source: fixture
+  recovery: []

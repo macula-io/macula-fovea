@@ -1,0 +1,16 @@
+id: deliver.availability
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: deliver threatens availability
+  manifestations:
+    - deliver availability observed
+defense:
+  detection:
+    - measure: deliver availability monitored
+      status: org
+  countermeasures:
+    - measure: deliver availability prevented
+      status: by_design
+      source: fixture
+  recovery: []

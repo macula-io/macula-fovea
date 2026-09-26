@@ -1,0 +1,4 @@
+describes: A spec column (temporal) is declared under the wrong family (lifecycle).
+base: valid_complete
+remove: []
+errors: [grid_column_wrong_family]

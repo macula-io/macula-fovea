@@ -1,0 +1,16 @@
+id: in_use.availability
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: in_use threatens availability
+  manifestations:
+    - in_use availability observed
+defense:
+  detection:
+    - measure: in_use availability monitored
+      status: org
+  countermeasures:
+    - measure: in_use availability prevented
+      status: by_design
+      source: fixture
+  recovery: []

@@ -1,0 +1,13 @@
+id: x_supply_chain.accountability
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: supply chain threatens accountability
+  manifestations:
+    - supply chain accountability observed
+defense:
+  detection:
+    - measure: supply chain accountability monitored
+      status: org
+  countermeasures: []
+  recovery: []

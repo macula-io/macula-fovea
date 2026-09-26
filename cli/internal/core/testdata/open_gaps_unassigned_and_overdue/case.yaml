@@ -1,0 +1,4 @@
+describes: An overdue roadmap cell is not a lint error, but open gaps must name it, and the unassigned owner.
+base: valid_complete
+remove: []
+errors: [cell_owner_unassigned]

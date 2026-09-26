@@ -1,0 +1,4 @@
+describes: cells_dir without a trailing slash resolves like one with it; one cell is missing so init has work to do.
+base: valid_complete
+remove: [cells/operate.availability.yaml]
+errors: [grid_missing_cell]

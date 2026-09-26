@@ -1,0 +1,16 @@
+id: temporal.accountability
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: temporal threatens accountability
+  manifestations:
+    - temporal accountability observed
+defense:
+  detection:
+    - measure: temporal accountability monitored
+      status: org
+  countermeasures:
+    - measure: temporal accountability prevented
+      status: by_design
+      source: fixture
+  recovery: []

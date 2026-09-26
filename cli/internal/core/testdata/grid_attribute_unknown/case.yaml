@@ -1,0 +1,4 @@
+describes: The header enables an attribute the spec does not define (banana); its cells are expected and missing too.
+base: valid_complete
+remove: []
+errors: [grid_attribute_unknown, grid_missing_cell]

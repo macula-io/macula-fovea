@@ -1,0 +1,4 @@
+describes: The header lists an extension (possession) under core instead of enabled.
+base: valid_complete
+remove: []
+errors: [grid_core_attribute_invalid]

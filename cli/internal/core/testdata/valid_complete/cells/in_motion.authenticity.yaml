@@ -1,0 +1,16 @@
+id: in_motion.authenticity
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: in_motion threatens authenticity
+  manifestations:
+    - in_motion authenticity observed
+defense:
+  detection:
+    - measure: in_motion authenticity monitored
+      status: org
+  countermeasures:
+    - measure: in_motion authenticity prevented
+      status: by_design
+      source: fixture
+  recovery: []

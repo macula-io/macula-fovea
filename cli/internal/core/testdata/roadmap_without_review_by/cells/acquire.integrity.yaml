@@ -1,0 +1,13 @@
+id: acquire.integrity
+status: roadmap
+owner: fixture@example.org
+threat:
+  definition: acquire threatens integrity
+  manifestations:
+    - acquire integrity observed
+defense:
+  detection: []
+  countermeasures:
+    - measure: acquire integrity prevented later
+      status: roadmap
+  recovery: []

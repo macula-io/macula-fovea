@@ -1,0 +1,16 @@
+id: deliver.confidentiality
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: deliver threatens confidentiality
+  manifestations:
+    - deliver confidentiality observed
+defense:
+  detection:
+    - measure: deliver confidentiality monitored
+      status: org
+  countermeasures:
+    - measure: deliver confidentiality prevented
+      status: by_design
+      source: fixture
+  recovery: []

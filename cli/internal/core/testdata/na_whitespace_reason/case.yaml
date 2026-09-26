@@ -1,0 +1,4 @@
+describes: An na cell whose na_reason is only whitespace is unjustified, in lint, score and render alike.
+base: valid_complete
+remove: []
+errors: [na_without_reason]

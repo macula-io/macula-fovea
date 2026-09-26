@@ -1,0 +1,16 @@
+id: socio_legal.availability
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: socio_legal threatens availability
+  manifestations:
+    - socio_legal availability observed
+defense:
+  detection:
+    - measure: socio_legal availability monitored
+      status: org
+  countermeasures:
+    - measure: socio_legal availability prevented
+      status: by_design
+      source: fixture
+  recovery: []

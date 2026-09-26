@@ -1,0 +1,16 @@
+id: physical_natural.authenticity
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: physical_natural threatens authenticity
+  manifestations:
+    - physical_natural authenticity observed
+defense:
+  detection:
+    - measure: physical_natural authenticity monitored
+      status: org
+  countermeasures:
+    - measure: physical_natural authenticity prevented
+      status: by_design
+      source: fixture
+  recovery: []

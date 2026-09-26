@@ -1,0 +1,4 @@
+describes: The utility extension is neither enabled nor justified as disabled (whitespace does not justify).
+base: valid_complete
+remove: []
+errors: [grid_extension_unjustified]

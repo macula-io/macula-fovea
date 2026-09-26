@@ -1,0 +1,16 @@
+id: create.authenticity
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: create threatens authenticity
+  manifestations:
+    - create authenticity observed
+defense:
+  detection:
+    - measure: create authenticity monitored
+      status: org
+  countermeasures:
+    - measure: create authenticity prevented
+      status: by_design
+      source: fixture
+  recovery: []

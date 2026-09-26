@@ -1,0 +1,16 @@
+id: socio_legal.confidentiality
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: socio_legal threatens confidentiality
+  manifestations:
+    - socio_legal confidentiality observed
+defense:
+  detection:
+    - measure: socio_legal confidentiality monitored
+      status: org
+  countermeasures:
+    - measure: socio_legal confidentiality prevented
+      status: by_design
+      source: fixture
+  recovery: []

@@ -1,0 +1,16 @@
+id: decommission.authenticity
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: decommission threatens authenticity
+  manifestations:
+    - decommission authenticity observed
+defense:
+  detection:
+    - measure: decommission authenticity monitored
+      status: org
+  countermeasures:
+    - measure: decommission authenticity prevented
+      status: by_design
+      source: fixture
+  recovery: []

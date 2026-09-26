@@ -1,0 +1,13 @@
+id: x_supply_chain.integrity
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: supply chain threatens integrity
+  manifestations:
+    - supply chain integrity observed
+defense:
+  detection:
+    - measure: supply chain integrity monitored
+      status: org
+  countermeasures: []
+  recovery: []

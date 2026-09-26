@@ -1,0 +1,4 @@
+describes: A column (operate) is declared twice.
+base: valid_complete
+remove: []
+errors: [grid_column_duplicate]

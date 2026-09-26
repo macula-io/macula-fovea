@@ -1,0 +1,16 @@
+id: at_rest.accountability
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: at_rest threatens accountability
+  manifestations:
+    - at_rest accountability observed
+defense:
+  detection:
+    - measure: at_rest accountability monitored
+      status: org
+  countermeasures:
+    - measure: at_rest accountability prevented
+      status: by_design
+      source: fixture
+  recovery: []

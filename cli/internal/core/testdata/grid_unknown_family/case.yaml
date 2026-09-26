@@ -1,0 +1,4 @@
+describes: The header declares a fifth column family; the four families are fixed.
+base: valid_complete
+remove: []
+errors: [grid_family_unknown]

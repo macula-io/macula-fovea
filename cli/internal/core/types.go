@@ -1,12 +1,16 @@
 // Package core implements fovea's model, lint rules, scorecard and grid init
-// for spec v0.2. Spec-normative rules are cited where enforced.
+// for spec v0.2 and v0.3 (identical grid and cell rules; v0.3 changes only
+// the scorecard). Spec-normative rules are cited where enforced.
 package core
 
 import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"regexp"
 	"sort"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -139,7 +143,7 @@ func readYAML(path string, v any) error {
 
 func LoadHeader(dir string) (*Header, []Finding, error) {
 	h := &Header{}
-	err := readYAML(dir+"/fovea.yaml", h)
+	err := readYAML(filepath.Join(dir, "fovea.yaml"), h)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -147,33 +151,148 @@ func LoadHeader(dir string) (*Header, []Finding, error) {
 	if h.Fovea == "" || !knownVersions[h.Fovea] {
 		f = append(f, errf("header_version_unknown", "fovea.yaml", "fovea must be a known spec version (0.2, 0.3), got %q", h.Fovea))
 	}
-	if h.Owner == "unassigned" || h.Owner == "" {
+	if unassigned(h.Owner) {
 		f = append(f, errf("header_owner_unassigned", "fovea.yaml", "owner is unassigned"))
 	}
+	f = append(f, lintHeaderAttributes(h)...)
+	f = append(f, lintHeaderColumns(h)...)
+	if h.CellsDir == "" {
+		h.CellsDir = "cells"
+	}
+	return h, f, nil
+}
+
+// unassigned reports whether an owner field names nobody. The comparison is
+// normalised: " Unassigned " claims no more than "unassigned" does.
+func unassigned(owner string) bool {
+	o := strings.TrimSpace(owner)
+	return o == "" || strings.EqualFold(o, "unassigned")
+}
+
+// specColumns is the fixed grid of spec 10-axes: 16 columns in four
+// families. A header declares exactly these, each in its own family, plus
+// optional x_-prefixed extension columns.
+var specColumns = map[string][]string{
+	"actors":      {"internal", "external", "trusted_partner", "machine_agent"},
+	"lifecycle":   {"create", "acquire", "deliver", "operate", "admin", "decommission"},
+	"data":        {"at_rest", "in_motion", "in_use"},
+	"environment": {"physical_natural", "socio_legal", "temporal"},
+}
+
+// extensionAttributes are the only optional attribute rows (spec
+// 11-attributes); each one not enabled carries a written justification.
+var extensionAttributes = []string{"possession", "utility"}
+
+var extensionColumn = regexp.MustCompile(`^x_[a-z0-9_]+$`)
+
+func contains(list []string, s string) bool {
+	for _, x := range list {
+		if x == s {
+			return true
+		}
+	}
+	return false
+}
+
+// lintHeaderColumns enforces the fixed grid (spec 10-axes): no spec column
+// dropped, moved or doubled, no invented column, no fifth family.
+func lintHeaderColumns(h *Header) []Finding {
+	var f []Finding
+	for fam := range h.Columns {
+		if _, ok := specColumns[fam]; !ok {
+			f = append(f, errf("grid_family_unknown", "fovea.yaml", "columns.%s is not a column family (actors, lifecycle, data, environment)", fam))
+		}
+	}
+	declaredIn := map[string]string{}
+	for _, fam := range families {
+		for _, col := range h.Columns[fam] {
+			if prev, dup := declaredIn[col]; dup {
+				f = append(f, errf("grid_column_duplicate", "fovea.yaml", "column %q is declared more than once (columns.%s and columns.%s)", col, prev, fam))
+				continue
+			}
+			declaredIn[col] = fam
+			if extensionColumn.MatchString(col) || contains(specColumns[fam], col) {
+				continue
+			}
+			if home := specFamilyOf(col); home != "" {
+				f = append(f, errf("grid_column_wrong_family", "fovea.yaml", "column %q belongs to columns.%s, not columns.%s", col, home, fam))
+				continue
+			}
+			f = append(f, errf("grid_column_unknown", "fovea.yaml", "column %q in columns.%s is not a spec column; extensions need the x_ prefix", col, fam))
+		}
+	}
+	for _, fam := range families {
+		for _, col := range specColumns[fam] {
+			if _, ok := declaredIn[col]; !ok {
+				f = append(f, errf("grid_missing_column", "fovea.yaml", "spec column %q is missing from columns.%s; the grid is fixed", col, fam))
+			}
+		}
+	}
+	return f
+}
+
+func specFamilyOf(col string) string {
+	for _, fam := range families {
+		if contains(specColumns[fam], col) {
+			return fam
+		}
+	}
+	return ""
+}
+
+// lintHeaderAttributes enforces spec 11-attributes: exactly the core five
+// under core, only possession and utility under enabled, and a written
+// justification for each extension left disabled.
+func lintHeaderAttributes(h *Header) []Finding {
+	var f []Finding
+	a := h.Attributes
 	seen := map[string]bool{}
-	for _, a := range h.Attributes.Core {
-		seen[a] = true
+	for _, x := range a.Core {
+		switch {
+		case seen[x]:
+			f = append(f, errf("grid_attribute_duplicate", "fovea.yaml", "attribute %q is listed more than once", x))
+		case contains(extensionAttributes, x):
+			f = append(f, errf("grid_core_attribute_invalid", "fovea.yaml", "%q is an extension, not a core attribute; list it under attributes.enabled", x))
+		case !contains(coreFive, x):
+			f = append(f, errf("grid_attribute_unknown", "fovea.yaml", "attribute %q in attributes.core is not a spec attribute", x))
+		}
+		seen[x] = true
 	}
 	for _, req := range coreFive {
-		if !seen[req] {
+		if !contains(a.Core, req) {
 			f = append(f, errf("grid_core_attribute_missing", "fovea.yaml", "core attribute %q missing", req))
 		}
 	}
-	for fam := range map[string]bool{"actors": true, "lifecycle": true, "data": true, "environment": true} {
-		if len(h.Columns[fam]) == 0 {
-			f = append(f, errf("grid_missing_column", "fovea.yaml", "columns.%s must be declared and non-empty", fam))
+	for _, x := range a.Enabled {
+		switch {
+		case seen[x]:
+			f = append(f, errf("grid_attribute_duplicate", "fovea.yaml", "attribute %q is listed more than once", x))
+		case !contains(extensionAttributes, x):
+			f = append(f, errf("grid_attribute_unknown", "fovea.yaml", "attribute %q in attributes.enabled is not an extension (possession, utility)", x))
+		}
+		seen[x] = true
+	}
+	for x := range a.DisabledJustifications {
+		if !contains(extensionAttributes, x) {
+			f = append(f, errf("grid_attribute_unknown", "fovea.yaml", "attributes.disabled_justifications.%s is not an extension (possession, utility)", x))
 		}
 	}
-	if h.CellsDir == "" {
-		h.CellsDir = "cells/"
+	for _, x := range extensionAttributes {
+		reason := strings.TrimSpace(a.DisabledJustifications[x])
+		switch {
+		case contains(a.Enabled, x) && reason != "":
+			f = append(f, errf("grid_extension_contradiction", "fovea.yaml", "extension %q is enabled and also justified as disabled", x))
+		case !contains(a.Enabled, x) && reason == "":
+			f = append(f, errf("grid_extension_unjustified", "fovea.yaml", "extension %q is disabled without a written justification in attributes.disabled_justifications", x))
+		}
 	}
-	return h, f, nil
+	return f
 }
 
 // LoadCells parses every cell present in the cells dir; returns cells by id,
 // plus findings for unparseable files.
 func LoadCells(dir string, h *Header) (map[string]*Cell, []string, []Finding) {
-	cellsDir := dir + "/" + h.CellsDir
+	cellsDir := filepath.Join(dir, h.CellsDir)
 	out := map[string]*Cell{}
 	var files []string
 	var f []Finding
@@ -191,7 +310,7 @@ func LoadCells(dir string, h *Header) (map[string]*Cell, []string, []Finding) {
 		}
 		files = append(files, name)
 		c := &Cell{}
-		if err := readYAML(cellsDir+name, c); err != nil {
+		if err := readYAML(filepath.Join(cellsDir, name), c); err != nil {
 			f = append(f, errf("cell_parse", name, "parse: %v", err))
 			continue
 		}

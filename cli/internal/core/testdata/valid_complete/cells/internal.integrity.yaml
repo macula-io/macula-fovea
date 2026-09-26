@@ -1,0 +1,16 @@
+id: internal.integrity
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: internal threatens integrity
+  manifestations:
+    - internal integrity observed
+defense:
+  detection:
+    - measure: internal integrity monitored
+      status: org
+  countermeasures:
+    - measure: internal integrity prevented
+      status: by_design
+      source: fixture
+  recovery: []

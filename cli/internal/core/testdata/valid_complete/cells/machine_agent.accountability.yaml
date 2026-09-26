@@ -1,0 +1,16 @@
+id: machine_agent.accountability
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: machine_agent threatens accountability
+  manifestations:
+    - machine_agent accountability observed
+defense:
+  detection:
+    - measure: machine_agent accountability monitored
+      status: org
+  countermeasures:
+    - measure: machine_agent accountability prevented
+      status: by_design
+      source: fixture
+  recovery: []

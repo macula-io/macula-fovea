@@ -1,0 +1,16 @@
+id: acquire.integrity
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: acquire threatens integrity
+  manifestations:
+    - acquire integrity observed
+defense:
+  detection:
+    - measure: acquire integrity monitored
+      status: org
+  countermeasures:
+    - measure: acquire integrity prevented
+      status: by_design
+      source: fixture
+  recovery: []

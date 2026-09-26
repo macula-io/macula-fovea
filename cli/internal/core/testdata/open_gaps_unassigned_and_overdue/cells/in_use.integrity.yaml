@@ -1,0 +1,14 @@
+id: in_use.integrity
+status: roadmap
+owner: fixture@example.org
+threat:
+  definition: in use threatens integrity
+  manifestations:
+    - in use integrity observed
+defense:
+  detection: []
+  countermeasures:
+    - measure: in use integrity prevented later
+      status: roadmap
+  recovery: []
+review_by: "2020-01-01"

@@ -1,0 +1,16 @@
+id: machine_agent.authenticity
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: machine_agent threatens authenticity
+  manifestations:
+    - machine_agent authenticity observed
+defense:
+  detection:
+    - measure: machine_agent authenticity monitored
+      status: org
+  countermeasures:
+    - measure: machine_agent authenticity prevented
+      status: by_design
+      source: fixture
+  recovery: []

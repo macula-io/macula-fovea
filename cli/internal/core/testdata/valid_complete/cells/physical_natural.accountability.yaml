@@ -1,0 +1,16 @@
+id: physical_natural.accountability
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: physical_natural threatens accountability
+  manifestations:
+    - physical_natural accountability observed
+defense:
+  detection:
+    - measure: physical_natural accountability monitored
+      status: org
+  countermeasures:
+    - measure: physical_natural accountability prevented
+      status: by_design
+      source: fixture
+  recovery: []
