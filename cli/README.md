@@ -69,8 +69,10 @@ that cannot be tied to an id (`cell_parse`, `cell_id_filename_mismatch`),
 and the cell id otherwise. The errors are compared as a multiset of
 `(rule, where)` pairs: nothing missing, nothing extra, each as often as
 listed. `expect:` has room for scorecard and claim-state expectations
-later. `go test ./...` runs every case, and a test fails if a rule code in
-the lint sources has no case named after it.
+later. `go test ./...` runs every case. Rule codes are spelled once, in the
+rule table in `internal/core/rules.go`; findings can only be raised for a
+rule from that table, and a test fails if any rule in it has no case named
+after it.
 
 ## GitHub Action
 

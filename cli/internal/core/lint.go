@@ -100,7 +100,7 @@ func lintCoverage(h *Header, cells map[string]*Cell) []Finding {
 	var f []Finding
 	for _, id := range h.ExpectedCells() {
 		if _, ok := cells[id]; !ok {
-			f = append(f, errf("grid_missing_cell", id, "missing cell (run: fovea init)"))
+			f = append(f, errf(ruleGridMissingCell, id, "missing cell (run: fovea init)"))
 		}
 	}
 	return f
@@ -121,40 +121,40 @@ func lintEachCell(h *Header, cells map[string]*Cell) []Finding {
 		// Rule: no invisible columns/attributes (12-cell-schema hard rule 2).
 		parts := strings.SplitN(id, ".", 2)
 		if len(parts) != 2 || !declaredCol[parts[0]] || !declaredAttr[parts[1]] {
-			f = append(f, errf("cell_id_undeclared", id, "id parts not declared in the header"))
+			f = append(f, errf(ruleCellIDUndeclared, id, "id parts not declared in the header"))
 		}
 		if !statuses[c.Status] {
-			f = append(f, errf("cell_status_unknown", id, "unknown status %q", c.Status))
+			f = append(f, errf(ruleCellStatusUnknown, id, "unknown status %q", c.Status))
 		}
 		if unassigned(c.Owner) {
-			f = append(f, errf("cell_owner_unassigned", id, "owner is unassigned"))
+			f = append(f, errf(ruleCellOwnerUnassigned, id, "owner is unassigned"))
 		}
 		switch c.Status {
 		case "unassessed":
 			// Spec 00 status table: unassessed is not allowed at final, and
 			// lint is what "final" means. A present cell must be answered.
-			f = append(f, errf("cell_unassessed", id, "status unassessed: the cell exists but nobody has answered it"))
+			f = append(f, errf(ruleCellUnassessed, id, "status unassessed: the cell exists but nobody has answered it"))
 		case "na":
 			if !naJustified(c) {
-				f = append(f, errf("na_without_reason", id, "status na without na_reason"))
+				f = append(f, errf(ruleNAWithoutReason, id, "status na without na_reason"))
 			}
 		case "roadmap", "assumed", "assessed":
 			// Content rules hold for every answered cell, roadmap included:
 			// a roadmap cell is a work package and must say what the work is.
 			if strings.TrimSpace(c.Threat.Definition) == "" {
-				f = append(f, errf("definition_empty", id, "empty threat definition"))
+				f = append(f, errf(ruleDefinitionEmpty, id, "empty threat definition"))
 			}
 			if len(c.Threat.Manifestations) == 0 {
-				f = append(f, errf("manifestations_empty", id, "zero manifestations"))
+				f = append(f, errf(ruleManifestationsEmpty, id, "zero manifestations"))
 			}
 			// Spec 12 hard rule 1, no empty answers: an answered cell names
 			// its measures, and detection may be empty only with an na_reason
 			// arguing that detection is structurally impossible.
 			switch {
 			case len(allMeasures(c)) == 0:
-				f = append(f, errf("measures_empty", id, "no detection, countermeasure or recovery measure: the cell answers nothing"))
+				f = append(f, errf(ruleMeasuresEmpty, id, "no detection, countermeasure or recovery measure: the cell answers nothing"))
 			case len(c.Defense.Detection) == 0 && !naJustified(c):
-				f = append(f, errf("detection_empty", id, "no detection measure and no na_reason arguing why detection is impossible"))
+				f = append(f, errf(ruleDetectionEmpty, id, "no detection measure and no na_reason arguing why detection is impossible"))
 			}
 		}
 		hasRoadmapMeasure := false
@@ -164,21 +164,21 @@ func lintEachCell(h *Header, cells map[string]*Cell) []Finding {
 		switch {
 		case strings.TrimSpace(c.ReviewBy) != "":
 			if _, err := time.Parse("2006-01-02", c.ReviewBy); err != nil {
-				f = append(f, errf("review_by_not_iso_date", id, "review_by %q is not an ISO date", c.ReviewBy))
+				f = append(f, errf(ruleReviewByNotISODate, id, "review_by %q is not an ISO date", c.ReviewBy))
 			}
 		case c.Status == "roadmap":
-			f = append(f, errf("roadmap_without_review_by", id, "status roadmap without review_by"))
+			f = append(f, errf(ruleRoadmapWithoutReviewBy, id, "status roadmap without review_by"))
 		case hasRoadmapMeasure:
 			// Spec 12 measure statuses: a roadmap measure requires review_by
 			// on the cell, whatever the cell's own status.
-			f = append(f, errf("roadmap_measure_without_review_by", id, "roadmap measure without review_by on the cell"))
+			f = append(f, errf(ruleRoadmapMeasureWithoutReviewBy, id, "roadmap measure without review_by on the cell"))
 		}
 		for _, m := range allMeasures(c) {
 			if !measureStatuses[m.Status] {
-				f = append(f, errf("measure_status_unknown", id, "measure with unknown status %q", m.Status))
+				f = append(f, errf(ruleMeasureStatusUnknown, id, "measure with unknown status %q", m.Status))
 			}
 			if m.Status == "by_design" && strings.TrimSpace(m.Source) == "" {
-				f = append(f, errf("by_design_without_source", id, "by_design measure without source"))
+				f = append(f, errf(ruleByDesignWithoutSource, id, "by_design measure without source"))
 			}
 		}
 		// Anti-theater: assessed must mean the product answers something.
@@ -192,7 +192,7 @@ func lintEachCell(h *Header, cells map[string]*Cell) []Finding {
 					}
 				}
 				if allOrg {
-					f = append(f, errf("assessed_all_org", id, "status assessed but every measure is org; the cell is org-managed, not assessed"))
+					f = append(f, errf(ruleAssessedAllOrg, id, "status assessed but every measure is org; the cell is org-managed, not assessed"))
 				}
 			}
 		}
@@ -226,8 +226,8 @@ func lintDuplicates(cells map[string]*Cell) []Finding {
 			sim := jaccard(toks[ids[i]], toks[ids[j]])
 			if sim >= 0.85 {
 				f = append(f,
-					errf("definition_copy_paste", ids[i], "threat definition ≥85%% similar to %s (%.2f), copy-paste", ids[j], sim),
-					errf("definition_copy_paste", ids[j], "threat definition ≥85%% similar to %s (%.2f), copy-paste", ids[i], sim))
+					errf(ruleDefinitionCopyPaste, ids[i], "threat definition ≥85%% similar to %s (%.2f), copy-paste", ids[j], sim),
+					errf(ruleDefinitionCopyPaste, ids[j], "threat definition ≥85%% similar to %s (%.2f), copy-paste", ids[i], sim))
 			}
 		}
 	}

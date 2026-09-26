@@ -145,29 +145,20 @@ func TestConformanceCases(t *testing.T) {
 	}
 }
 
-var ruleCode = regexp.MustCompile(`errf\("([a-z0-9_]+)"`)
-
 // TestEveryRuleHasACaseNamedAfterIt keeps the documented promise: each rule
-// code the lint can raise has testdata/<code>/, and that case expects it.
+// the lint can raise has testdata/<code>/, and that case expects it. It
+// iterates the rule table, which errf requires, so no rule can be missed.
 func TestEveryRuleHasACaseNamedAfterIt(t *testing.T) {
-	srcs, _ := filepath.Glob("*.go")
-	codes := map[string]bool{}
-	for _, p := range srcs {
-		if strings.HasSuffix(p, "_test.go") {
-			continue
-		}
-		b, err := os.ReadFile(p)
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, m := range ruleCode.FindAllStringSubmatch(string(b), -1) {
-			codes[m[1]] = true
-		}
+	if len(allRules) == 0 {
+		t.Fatal("the rule table is empty")
 	}
-	if len(codes) == 0 {
-		t.Fatal("found no rule codes in the lint sources")
-	}
-	for code := range codes {
+	seen := map[string]bool{}
+	for _, r := range allRules {
+		code := r.Code()
+		if seen[code] {
+			t.Errorf("rule code %s is in the table twice", code)
+		}
+		seen[code] = true
 		if _, err := os.Stat(filepath.Join("testdata", code, "case.yaml")); err != nil {
 			t.Errorf("rule %s has no case testdata/%s/", code, code)
 			continue
@@ -178,6 +169,28 @@ func TestEveryRuleHasACaseNamedAfterIt(t *testing.T) {
 		}
 		if !expects {
 			t.Errorf("case testdata/%s/ does not expect rule %s", code, code)
+		}
+	}
+}
+
+var ruleForgery = regexp.MustCompile(`\bnewRule\(|\bRule\{`)
+
+// TestRulesAreMadeOnlyInTheTable closes the gap a table could leave: a Rule
+// built anywhere but rules.go would reach errf without being in allRules.
+func TestRulesAreMadeOnlyInTheTable(t *testing.T) {
+	srcs, _ := filepath.Glob("*.go")
+	for _, p := range srcs {
+		if p == "rules.go" || strings.HasSuffix(p, "_test.go") {
+			continue
+		}
+		b, err := os.ReadFile(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for i, line := range strings.Split(string(b), "\n") {
+			if ruleForgery.MatchString(line) {
+				t.Errorf("%s:%d makes a Rule outside rules.go: %s", p, i+1, strings.TrimSpace(line))
+			}
 		}
 	}
 }

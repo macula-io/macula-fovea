@@ -149,10 +149,10 @@ func LoadHeader(dir string) (*Header, []Finding, error) {
 	}
 	var f []Finding
 	if h.Fovea == "" || !knownVersions[h.Fovea] {
-		f = append(f, errf("header_version_unknown", "fovea.yaml", "fovea must be a known spec version (0.2, 0.3), got %q", h.Fovea))
+		f = append(f, errf(ruleHeaderVersionUnknown, "fovea.yaml", "fovea must be a known spec version (0.2, 0.3), got %q", h.Fovea))
 	}
 	if unassigned(h.Owner) {
-		f = append(f, errf("header_owner_unassigned", "fovea.yaml", "owner is unassigned"))
+		f = append(f, errf(ruleHeaderOwnerUnassigned, "fovea.yaml", "owner is unassigned"))
 	}
 	f = append(f, lintHeaderAttributes(h)...)
 	f = append(f, lintHeaderColumns(h)...)
@@ -200,14 +200,14 @@ func lintHeaderColumns(h *Header) []Finding {
 	var f []Finding
 	for fam := range h.Columns {
 		if _, ok := specColumns[fam]; !ok {
-			f = append(f, errf("grid_family_unknown", "fovea.yaml", "columns.%s is not a column family (actors, lifecycle, data, environment)", fam))
+			f = append(f, errf(ruleGridFamilyUnknown, "fovea.yaml", "columns.%s is not a column family (actors, lifecycle, data, environment)", fam))
 		}
 	}
 	declaredIn := map[string]string{}
 	for _, fam := range families {
 		for _, col := range h.Columns[fam] {
 			if prev, dup := declaredIn[col]; dup {
-				f = append(f, errf("grid_column_duplicate", "fovea.yaml", "column %q is declared more than once (columns.%s and columns.%s)", col, prev, fam))
+				f = append(f, errf(ruleGridColumnDuplicate, "fovea.yaml", "column %q is declared more than once (columns.%s and columns.%s)", col, prev, fam))
 				continue
 			}
 			declaredIn[col] = fam
@@ -215,16 +215,16 @@ func lintHeaderColumns(h *Header) []Finding {
 				continue
 			}
 			if home := specFamilyOf(col); home != "" {
-				f = append(f, errf("grid_column_wrong_family", "fovea.yaml", "column %q belongs to columns.%s, not columns.%s", col, home, fam))
+				f = append(f, errf(ruleGridColumnWrongFamily, "fovea.yaml", "column %q belongs to columns.%s, not columns.%s", col, home, fam))
 				continue
 			}
-			f = append(f, errf("grid_column_unknown", "fovea.yaml", "column %q in columns.%s is not a spec column; extensions need the x_ prefix", col, fam))
+			f = append(f, errf(ruleGridColumnUnknown, "fovea.yaml", "column %q in columns.%s is not a spec column; extensions need the x_ prefix", col, fam))
 		}
 	}
 	for _, fam := range families {
 		for _, col := range specColumns[fam] {
 			if _, ok := declaredIn[col]; !ok {
-				f = append(f, errf("grid_missing_column", "fovea.yaml", "spec column %q is missing from columns.%s; the grid is fixed", col, fam))
+				f = append(f, errf(ruleGridMissingColumn, "fovea.yaml", "spec column %q is missing from columns.%s; the grid is fixed", col, fam))
 			}
 		}
 	}
@@ -250,40 +250,40 @@ func lintHeaderAttributes(h *Header) []Finding {
 	for _, x := range a.Core {
 		switch {
 		case seen[x]:
-			f = append(f, errf("grid_attribute_duplicate", "fovea.yaml", "attribute %q is listed more than once", x))
+			f = append(f, errf(ruleGridAttributeDuplicate, "fovea.yaml", "attribute %q is listed more than once", x))
 		case contains(extensionAttributes, x):
-			f = append(f, errf("grid_core_attribute_invalid", "fovea.yaml", "%q is an extension, not a core attribute; list it under attributes.enabled", x))
+			f = append(f, errf(ruleGridCoreAttributeInvalid, "fovea.yaml", "%q is an extension, not a core attribute; list it under attributes.enabled", x))
 		case !contains(coreFive, x):
-			f = append(f, errf("grid_attribute_unknown", "fovea.yaml", "attribute %q in attributes.core is not a spec attribute", x))
+			f = append(f, errf(ruleGridAttributeUnknown, "fovea.yaml", "attribute %q in attributes.core is not a spec attribute", x))
 		}
 		seen[x] = true
 	}
 	for _, req := range coreFive {
 		if !contains(a.Core, req) {
-			f = append(f, errf("grid_core_attribute_missing", "fovea.yaml", "core attribute %q missing", req))
+			f = append(f, errf(ruleGridCoreAttributeMissing, "fovea.yaml", "core attribute %q missing", req))
 		}
 	}
 	for _, x := range a.Enabled {
 		switch {
 		case seen[x]:
-			f = append(f, errf("grid_attribute_duplicate", "fovea.yaml", "attribute %q is listed more than once", x))
+			f = append(f, errf(ruleGridAttributeDuplicate, "fovea.yaml", "attribute %q is listed more than once", x))
 		case !contains(extensionAttributes, x):
-			f = append(f, errf("grid_attribute_unknown", "fovea.yaml", "attribute %q in attributes.enabled is not an extension (possession, utility)", x))
+			f = append(f, errf(ruleGridAttributeUnknown, "fovea.yaml", "attribute %q in attributes.enabled is not an extension (possession, utility)", x))
 		}
 		seen[x] = true
 	}
 	for x := range a.DisabledJustifications {
 		if !contains(extensionAttributes, x) {
-			f = append(f, errf("grid_attribute_unknown", "fovea.yaml", "attributes.disabled_justifications.%s is not an extension (possession, utility)", x))
+			f = append(f, errf(ruleGridAttributeUnknown, "fovea.yaml", "attributes.disabled_justifications.%s is not an extension (possession, utility)", x))
 		}
 	}
 	for _, x := range extensionAttributes {
 		reason := strings.TrimSpace(a.DisabledJustifications[x])
 		switch {
 		case contains(a.Enabled, x) && reason != "":
-			f = append(f, errf("grid_extension_contradiction", "fovea.yaml", "extension %q is enabled and also justified as disabled", x))
+			f = append(f, errf(ruleGridExtensionContradiction, "fovea.yaml", "extension %q is enabled and also justified as disabled", x))
 		case !contains(a.Enabled, x) && reason == "":
-			f = append(f, errf("grid_extension_unjustified", "fovea.yaml", "extension %q is disabled without a written justification in attributes.disabled_justifications", x))
+			f = append(f, errf(ruleGridExtensionUnjustified, "fovea.yaml", "extension %q is disabled without a written justification in attributes.disabled_justifications", x))
 		}
 	}
 	return f
@@ -300,7 +300,7 @@ func LoadCells(dir string, h *Header) (map[string]*Cell, []string, []Finding) {
 	if err != nil {
 		// Reported against the header, where cells_dir is set and fixed, and
 		// independent of the directory the assessment happens to live in.
-		return out, files, append(f, errf("cells_dir_unreadable", "fovea.yaml", "cells_dir %q cannot be read: %v", h.CellsDir, err))
+		return out, files, append(f, errf(ruleCellsDirUnreadable, "fovea.yaml", "cells_dir %q cannot be read: %v", h.CellsDir, err))
 	}
 	for _, e := range ents {
 		if e.IsDir() {
@@ -313,11 +313,11 @@ func LoadCells(dir string, h *Header) (map[string]*Cell, []string, []Finding) {
 		files = append(files, name)
 		c := &Cell{}
 		if err := readYAML(filepath.Join(cellsDir, name), c); err != nil {
-			f = append(f, errf("cell_parse", name, "parse: %v", err))
+			f = append(f, errf(ruleCellParse, name, "parse: %v", err))
 			continue
 		}
 		if got := name[:len(name)-5]; got != c.ID {
-			f = append(f, errf("cell_id_filename_mismatch", name, "filename base %q != id %q", got, c.ID))
+			f = append(f, errf(ruleCellIDFilenameMismatch, name, "filename base %q != id %q", got, c.ID))
 		}
 		out[c.ID] = c
 	}
@@ -334,8 +334,9 @@ type Finding struct {
 	Message string
 }
 
-func errf(rule, where, format string, args ...any) Finding {
-	return Finding{rule, true, where, fmt.Sprintf(format, args...)}
+// errf raises an error finding for a rule from the rule table.
+func errf(rule Rule, where, format string, args ...any) Finding {
+	return Finding{rule.code, true, where, fmt.Sprintf(format, args...)}
 }
 
 func printFindings(w io.Writer, fs []Finding) (errs, warns int) {
