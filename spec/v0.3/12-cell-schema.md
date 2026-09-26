@@ -1,8 +1,15 @@
 # 12 — The cell schema
 
-One file per cell, YAML, linted. Validated against
-[schema/cell.schema.json](../../schema/cell.schema.json) after YAML→JSON
-conversion.
+One file per cell, YAML, linted by the `fovea` CLI, which is the reference
+implementation of this spec.
+
+> **Erratum (2026-09-26).** This section said cell files are "validated
+> against `schema/cell.schema.json` after YAML to JSON conversion". Nothing
+> loaded those JSON Schemas, and they contradicted the CLI (the header
+> schema accepted only `fovea: "0.2"`; `fovea init` skeletons failed the
+> cell schema), so they were removed. The `fovea` CLI's `lint` is the
+> reference implementation of these rules; a language-neutral conformance
+> suite follows it.
 
 ## Required structure
 
@@ -57,8 +64,14 @@ notes: >
 
 ## Status propagation (informative)
 
-The scorecard (13-scorecard) reads only `status` and `review_by`; nothing
-else in the cell affects roll-up. If a cell contains both `by_design` and
+The scorecard's RAG roll-up (13-scorecard) reads only `status`, and for
+`na` whether `na_reason` is written; nothing else in the cell affects
+roll-up. If a cell contains both `by_design` and
 `roadmap` measures, the *cell* status remains `assumed` or `assessed` — the
 honesty lives inside the measures, so the headline number isn't faked by
 tone either.
+
+> **Erratum (2026-09-26).** This section said the scorecard reads only
+> `status` and `review_by`. The headline metrics read more: `pct_by_design`
+> counts measure statuses and `na_unjustified` reads `na_reason`. The
+> sentence now describes the roll-up, which is what it meant.

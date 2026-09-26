@@ -1,6 +1,8 @@
 # Proposal — fovea issues: the matrix becomes the backlog
 
-**Status: PROPOSED. Not normative.** No CLI command enforces this yet. It is
+**Status: PROPOSED. Not normative.** Phases 1 and 2 are implemented as
+`fovea issues` (see below and [docs/issues-bridge.md](../../../docs/issues-bridge.md));
+the spec does not require them. It is
 the "work out" half of the loop, symmetric to
 [`v0.4-evidence`](../v0.4-evidence/README.md)'s "evidence in".
 

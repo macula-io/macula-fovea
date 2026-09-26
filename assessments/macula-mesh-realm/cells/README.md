@@ -1,11 +1,11 @@
 # Cells
 
 One YAML file per `column.attribute` the header (`../fovea.yaml`) declares in
-force, named `<column>.<attribute>.yaml`, validated by
-[`../../../../schema/cell.schema.json`](../../../../schema/cell.schema.json).
-Contents per cell obey [spec/v0.2/12-cell-schema.md](../../../../spec/v0.2/12-cell-schema.md).
+force, named `<column>.<attribute>.yaml` and checked by `fovea lint`.
+Contents per cell obey [spec/v0.2/12-cell-schema.md](../../../spec/v0.2/12-cell-schema.md)
+(the header declares `fovea: "0.2"`).
 
-`fovea init` (planned CLI) generates the full grid of empty skeletons with
+`fovea init` generates the full grid of empty skeletons with
 status `unassessed` from the header — 16 columns × 5 core attributes, plus 16
 more because `possession` is enabled here. The current seed files
 (`in_motion.confidentiality.yaml`) are hand-written worked examples to

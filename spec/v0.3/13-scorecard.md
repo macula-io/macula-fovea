@@ -49,6 +49,11 @@ v0.2 implied but never showed:
    red — the red invariant is about unfinished work, not about cells that
    were honestly judged empty.
 
+   > **Erratum (2026-09-26).** An `na` cell whose `na_reason` is missing or
+   > blank is not a justified N/A: lint fails it and `na_unjustified` counts
+   > it. The grid treats it the same way, as unfinished work (red, not
+   > authored), so it can no longer render as a fully covered `-` block.
+
 ## Headline metrics (unchanged from v0.2)
 
 | Metric | Definition | Purpose |

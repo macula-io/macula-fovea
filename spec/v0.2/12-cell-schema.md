@@ -1,8 +1,15 @@
 # 12 — The cell schema
 
-One file per cell, YAML, linted. Validated against
-[schema/cell.schema.json](../../schema/cell.schema.json) after YAML→JSON
-conversion.
+One file per cell, YAML, linted by the `fovea` CLI, which is the reference
+implementation of this spec.
+
+> **Erratum (2026-09-26).** This section said cell files are "validated
+> against `schema/cell.schema.json` after YAML to JSON conversion". Nothing
+> loaded those JSON Schemas, and they contradicted the CLI (the header
+> schema accepted only `fovea: "0.2"`; `fovea init` skeletons failed the
+> cell schema), so they were removed. The `fovea` CLI's `lint` is the
+> reference implementation of these rules; a language-neutral conformance
+> suite follows it.
 
 ## Required structure
 

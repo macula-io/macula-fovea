@@ -66,7 +66,7 @@ Linting (see 13-scorecard) fails an assessment when:
 
 ## Versioning
 
-See [spec/README.md](../README.md). This is **v0.2**. The taxonomy is
+See [spec/README.md](../README.md). This is **v0.3**. The taxonomy is
 therefore frozen at release and evolves only through numbered versions —
 decisions about axes and attributes are made in spec PRs, not in prose
 debates inside individual assessments.

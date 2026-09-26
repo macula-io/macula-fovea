@@ -2,7 +2,7 @@
 
 An **attribute** is "the thing being protected" in a cell. Attributes are the
 rows of the matrix. There is no complete set of attributes accepted by the
-industry; fovea v0.2 standardizes **five core attributes** that are always
+industry; fovea standardizes **five core attributes** that are always
 assessed, and treats Parker's hexad additions as **extensions** to be
 enabled per system.
 

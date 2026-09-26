@@ -1,5 +1,5 @@
 # Fovea cell template — copy as: cells/<column>.<attribute>.yaml
-# Validated by ../../../schema/cell.schema.json
+# Checked by `fovea lint` (cli/), the reference implementation of spec 12.
 id: column.attribute
 status: unassessed
 owner: unassigned

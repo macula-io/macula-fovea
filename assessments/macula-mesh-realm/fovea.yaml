@@ -1,4 +1,4 @@
-# Fovea assessment header — validated by ../../../schema/assessment.schema.json
+# Fovea assessment header, checked by `fovea lint` (cli/).
 fovea: "0.2"
 system: macula-mesh-realm
 assessment_date: 2026-09-25
