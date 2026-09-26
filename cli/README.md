@@ -14,11 +14,14 @@ cells). It is the reference implementation of the spec: where the spec says
 | `fovea init <dir>` | Reads `fovea.yaml`, computes the declared grid, creates `cells_dir` if missing and every missing `<column>.<attribute>.yaml` as an `unassessed` skeleton. Only adds files: an existing cell, even one that fails to parse, is never overwritten. Refuses to run while the header has findings. | header invalid |
 | `fovea lint <dir> [--github]` | Header checks (the fixed grid, attributes, owner, version) + grid closure (every expected cell exists) + per-cell rules + copy-paste detection (>=85% definition similarity). `--github` emits workflow commands that annotate the offending files in a PR. | any error finding |
 | `fovea score <dir> [--json]` | Computes the [scorecard](../spec/v0.3/13-scorecard.md): expected/present/missing cells, `pct_unassessed`, `na_unjustified`, `pct_by_design`, oldest `review_by` and overdue roadmaps, cells per attribute and per family. Missing cells count as unassessed. With `--json`, stdout is valid JSON even when lint fails. | lint had errors |
-| `fovea render <dir> [--format md\|html\|json]` | The scorecard. v0.2 headers get the frozen worst-RAG grid; v0.3 headers get the coverage-aware grid (`R 2/6`) and the complete open-gaps list. `--html` and `--json` are short for the formats. | header unreadable |
+| `fovea render <dir> [--format md\|html\|json]` | The scorecard, in markdown, HTML (for GitHub job summaries, both spec versions) or JSON. v0.2 headers get the frozen worst-RAG grid; v0.3 headers get the coverage-aware grid (`R 2/6`) and the complete open-gaps list, which carries every header lint error. `--html` and `--json` are short for the formats. The scorecard is written even when lint fails; the findings then go to stderr. | lint had errors |
 | `fovea issues <dir> [--dry-run] [--check] [--repo o/r] [--token t]` | Syncs `roadmap` cells to GitHub issues, idempotently via a `<!-- fovea-cell: <id> -->` body marker. Refuses to act when the header or any cell fails to load. `--check` fails when a roadmap cell's linked issue is closed. See [issues-bridge](../docs/issues-bridge.md). | load findings, no token without `--dry-run`, `--check` trap, API errors |
 
 `dir` defaults to the current directory and may come before or after the
-flags. An unknown flag exits 2 with usage. Results go to stdout; load
+flags. Each command takes only its own flags (`lint --github`, `score
+--json`, `render --json|--html|--format`); any other flag exits 2 naming
+it. `--help` and `--help-issues` print usage and exit 0; no command or an
+unknown one exits 2. Results go to stdout; load
 errors, notes and warnings go to stderr, so `fovea score --json dir >
 score.json` stays parseable.
 
@@ -35,8 +38,10 @@ all. The rules, by family:
   undeclared column or attribute; the file name matches the id.
 - **Every cell is answered**: `unassessed` is an error; `owner` is claimed
   (`unassigned` in any case or spacing is not a claim).
-- **No empty answers**: `assumed`, `assessed` and `roadmap` cells need a
-  definition and at least one manifestation.
+- **No empty answers** (spec 12 hard rule 1): `assumed`, `assessed` and
+  `roadmap` cells need a definition, at least one manifestation, at least
+  one measure, and a detection measure unless `na_reason` argues why
+  detection is structurally impossible.
 - **The grid is honest**: `na` needs a non-blank `na_reason`; `roadmap`
   cells, and any cell with a `roadmap` measure, need a `review_by` ISO date;
   `by_design` measures need a `source`; `assessed` with every measure `org`
@@ -44,11 +49,28 @@ all. The rules, by family:
 - **The grid is written, not filled**: two cells with >=85% similar
   definitions trip the copy-paste detector.
 
-Each rule has a case under
-[`internal/core/testdata/`](internal/core/testdata/): an assessment
-directory plus a `case.yaml` naming the exact error rules lint must raise.
-Cases overlay the lint-clean 80-cell `valid_complete` base, so each one
-changes only what its rule is about. `go test ./...` runs them all.
+Each rule code has a case directory named after it under
+[`internal/core/testdata/`](internal/core/testdata/) (some rules have
+variants such as `definition_empty_roadmap`; positive cases such as
+`valid_complete` expect nothing). A case is an assessment directory plus a
+`case.yaml`:
+
+```yaml
+describes: One cell of the declared grid has no file.
+base: valid_complete            # optional: overlay this case's files on it
+remove: [cells/decommission.availability.yaml]
+expect:
+  errors:                       # the exact multiset lint must raise
+    - {rule: grid_missing_cell, where: decommission.availability}
+```
+
+`where` is `fovea.yaml` for header findings, the file name for a cell file
+that cannot be tied to an id (`cell_parse`, `cell_id_filename_mismatch`),
+and the cell id otherwise. The errors are compared as a multiset of
+`(rule, where)` pairs: nothing missing, nothing extra, each as often as
+listed. `expect:` has room for scorecard and claim-state expectations
+later. `go test ./...` runs every case, and a test fails if a rule code in
+the lint sources has no case named after it.
 
 ## GitHub Action
 

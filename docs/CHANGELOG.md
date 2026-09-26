@@ -38,6 +38,22 @@ The lint now enforces the spec it implements, and every rule is tested.
 - **CI.** gofmt, `go vet`, `go test -race`, build, and an end-to-end run of
   `action.yml` on every push and pull request.
 - `.gitignore` no longer hides `cli/cmd/fovea/`.
+- **No empty answers** (spec 12 hard rule 1): `measures_empty` and
+  `detection_empty` (detection may be empty only with an `na_reason`
+  arguing why). `assessed_all_org` no longer passes a measureless cell.
+- **Render** runs the full lint: a lint-failing assessment still gets its
+  scorecard, but the findings go to stderr and the exit code is 1; v0.3
+  open gaps carry the header's lint errors. `render --html` emits HTML for
+  0.2 headers too, and its metrics show the real lint error count.
+- **Case format**: `expect: {errors: [{rule, where}]}`, compared as an
+  exact multiset; every rule code has a case directory named after it, and
+  a test keeps it that way. `cells_dir_unreadable` is reported at
+  `fovea.yaml`.
+- `issues --dry-run` without a token says existing issues were not
+  consulted.
+- Flags are checked per command (`lint --json` exits 2); `--help` exits 0.
+- Spec v0.3 13: the RAG table itself now splits `na` by whether
+  `na_reason` is written (erratum).
 
 ## [0.3] — 2026-09-25
 

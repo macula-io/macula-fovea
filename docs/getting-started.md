@@ -75,7 +75,9 @@ fovea lint security/fovea
 
 Expect two errors per untouched skeleton: `cell_unassessed` and
 `cell_owner_unassigned`. Once a cell is answered (`assumed`, `assessed` or
-`roadmap`) it also needs a definition and at least one manifestation.
+`roadmap`) it also needs a definition, at least one manifestation, at
+least one measure, and a detection measure (or an `na_reason` arguing why
+detection is impossible).
 `lint` exits 0 only with no findings; [reference.md](reference.md) lists
 every rule code.
 

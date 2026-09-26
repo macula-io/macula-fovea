@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <strong>Security assessment specified as code — every cell a question<br>with a status and an owner, not a heading with hope.</strong>
+  <strong>Security assessment specified as code: every cell a question<br>with a status and an owner, not a heading with hope.</strong>
 </p>
 
 ---
@@ -36,7 +36,7 @@ here, caused by whom, and what do we honestly have against it."*
 
 ## What is macula-fovea?
 
-A **taxonomy with semantics**, versioned as a spec and enforced as data — not
+A **taxonomy with semantics**, versioned as a spec and enforced as data, not
 a spreadsheet with vibes. Threat models kept in Word documents and wiki
 tables rot quietly: cells go unfilled, copies drift, and nobody can diff "the
 threat model" against "the code". Fovea moves the model into the repository
@@ -50,16 +50,16 @@ normative contract everything else obeys.
 
 Concretely, a fovea assessment is four artifacts, produced **in order**:
 
-1. **Trust-anchor register** — the named things whose compromise breaks
+1. **Trust-anchor register**: the named things whose compromise breaks
    everything (domain CAs, root keys, build pipeline). If it isn't listed
    here, the assessment hasn't started.
-2. **System landscape** — the diagram the matrix refers to. Every column of
+2. **System landscape**: the diagram the matrix refers to. Every column of
    the matrix must name something on it; everything on it must be under at
    least one column.
-3. **The matrix** — cells of *column × attribute*, each one a YAML file with
+3. **The matrix**: cells of *column × attribute*, each one a YAML file with
    a threat, defenses, a status, and an owner.
-4. **The scorecard** — computed, never hand-written: roll-ups per attribute
-   and per column family, plus the headline metric — the count of
+4. **The scorecard**: computed, never hand-written: roll-ups per attribute
+   and per column family, plus the headline metric, the count of
    unjustified cells.
 
 ## The matrix
@@ -83,7 +83,7 @@ header: nothing hidden, nothing implicit.
 
 **Core five, always assessed:** `confidentiality`, `integrity`,
 `availability`, `authenticity`, `accountability`. Two Parkerian extensions,
-`possession` (asset taken but unread — the node-capture case) and `utility`
+`possession` (asset taken but unread: the node-capture case) and `utility`
 (asset intact but useless), are enabled per assessment in
 [`fovea.yaml`](assessments/macula-mesh-realm/fovea.yaml), with disabled ones
 carrying a written justification. Definitions in
@@ -108,8 +108,8 @@ defense:
 review_by: 2027-03-31      # the temporal column, applied everywhere
 ```
 
-Every defense measure carries its own claim strength — `by_design`,
-`roadmap`, or `org` (the organization's job, not the product's) — so the
+Every defense measure carries its own claim strength: `by_design`,
+`roadmap`, or `org` (the organization's job, not the product's). So the
 matrix reports **engineered fact separately from intent**, and intent
 separately from everyone else's homework. That's the entire point.
 
@@ -141,7 +141,7 @@ assessments/
 
 | Repo | Role |
 |---|---|
-| [`macula-io/macula-station`](https://github.com/macula-io/macula-station) | Subject of the first dogfood assessment — the mesh substrate under evaluation. |
+| [`macula-io/macula-station`](https://github.com/macula-io/macula-station) | Subject of the first dogfood assessment: the mesh substrate under evaluation. |
 | [`macula-io/macula-realm`](https://github.com/macula-io/macula-realm) | The governance half of the same assessment: CA hierarchy, membership policy. |
 | `macula-services/mcl-fovea` | The mesh-served observer being planned there; it implements the same rules and must pass the same conformance cases as this CLI. |
 

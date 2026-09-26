@@ -7,9 +7,9 @@ Everything the lint enforces, in one place. Normative: spec/v0.3.
 | Status | Meaning | Lint demands |
 |---|---|---|
 | `unassessed` | Nobody has answered the cell yet | always fails: answer it or declare `na` |
-| `assumed` | Answer drafted from docs/design, not verified | definition, manifestations; renders amber |
-| `assessed` | Verified by inspection of code, config, or test | cannot be all-`org` measures; `by_design` measures need `source` |
-| `roadmap` | Gap accepted as real, defense scheduled | `review_by` (ISO date), definition, manifestations |
+| `assumed` | Answer drafted from docs/design, not verified | definition, manifestations, measures, detection (or an argued `na_reason`); renders amber |
+| `assessed` | Verified by inspection of code, config, or test | as `assumed`, and not all-`org` measures |
+| `roadmap` | Gap accepted as real, defense scheduled | as `assumed`, plus `review_by` (ISO date) |
 | `na` | Not applicable | `na_reason` (written, not blank) |
 
 ## Measure statuses (claim strength)
@@ -29,8 +29,12 @@ justified N/As**: those never drag a block down, while unfinished cells
 
 ## Lint rules (failures, not style)
 
-Every finding carries a rule code. Each code has a case under
-`cli/internal/core/testdata/<code>/` (the cases seed the conformance suite).
+Every finding carries a rule code and a location (`where`): `fovea.yaml`
+for header findings, the file name for a cell file that cannot be tied to
+an id, the cell id otherwise. Each code has a case under
+`cli/internal/core/testdata/<code>/`, whose `case.yaml` lists the exact
+`(rule, where)` errors expected (the cases seed the conformance suite; the
+format is described in `cli/README.md`).
 
 | Rule code | Fails when |
 |---|---|
@@ -47,7 +51,7 @@ Every finding carries a rule code. Each code has a case under
 | `grid_attribute_duplicate` | an attribute is listed twice |
 | `grid_extension_unjustified` | `possession` or `utility` is neither enabled nor justified (blank is not a justification) |
 | `grid_extension_contradiction` | an extension is enabled and also justified as disabled |
-| `cells_dir_unreadable` | `cells_dir` does not exist or cannot be read |
+| `cells_dir_unreadable` | `cells_dir` does not exist or cannot be read (reported at `fovea.yaml`) |
 | `cell_parse` | a cell file is not valid YAML for the cell shape |
 | `cell_id_filename_mismatch` | the file name is not `<id>.yaml` |
 | `grid_missing_cell` | a declared column x attribute has no cell |
@@ -57,6 +61,8 @@ Every finding carries a rule code. Each code has a case under
 | `cell_owner_unassigned` | cell `owner` is empty or `unassigned` (any case, any spacing) |
 | `definition_empty` | an `assumed`, `assessed` or `roadmap` cell has no threat definition |
 | `manifestations_empty` | an `assumed`, `assessed` or `roadmap` cell has zero manifestations |
+| `measures_empty` | an `assumed`, `assessed` or `roadmap` cell has no detection, countermeasure or recovery measure |
+| `detection_empty` | such a cell has measures but no detection measure, and no `na_reason` arguing detection is structurally impossible (spec 12 hard rule 1) |
 | `na_without_reason` | an `na` cell has an empty or whitespace-only `na_reason` |
 | `roadmap_without_review_by` | a `roadmap` cell has no `review_by` |
 | `roadmap_measure_without_review_by` | any cell with a `roadmap` measure has no `review_by` |
@@ -75,7 +81,7 @@ An overdue `review_by` is not a lint error; the scorecard reports it
 fovea init   <dir>                      # generate missing skeletons (never overwrites)
 fovea lint   <dir> [--github]           # all rules above; --github emits PR annotations
 fovea score  <dir> [--json]             # headline metrics (exit 1 if lint has errors)
-fovea render <dir> [--format md|html|json]  # scorecard; --html / --json are short forms
+fovea render <dir> [--format md|html|json]  # scorecard; exit 1 if lint has errors
 fovea issues <dir> [--dry-run] [--check] [--repo o/r] [--token t]
 ```
 

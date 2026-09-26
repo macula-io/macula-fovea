@@ -1,4 +1,4 @@
-# Fovea cell template — copy as: cells/<column>.<attribute>.yaml
+# Fovea cell template; copy as: cells/<column>.<attribute>.yaml
 # Checked by `fovea lint` (cli/), the reference implementation of spec 12.
 id: column.attribute
 status: unassessed
