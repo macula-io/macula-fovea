@@ -3,6 +3,7 @@
 *.test
 *.out
 
-# Built CLI artifacts — the binary is produced by `go build`, never committed.
+# The built CLI binary (`go build -o fovea ./cmd/fovea` in cli/), never
+# committed. Anchored: an unanchored "fovea" pattern also matches the source
+# directory cli/cmd/fovea/ and silently drops new files there.
 /cli/fovea
-**/fovea
