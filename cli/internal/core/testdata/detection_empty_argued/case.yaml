@@ -1,0 +1,5 @@
+describes: Empty detection is allowed when na_reason argues that detection is structurally impossible (spec 12 hard rule 1).
+base: valid_complete
+remove: []
+expect:
+  errors: []

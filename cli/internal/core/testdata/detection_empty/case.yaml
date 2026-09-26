@@ -1,0 +1,6 @@
+describes: An answered cell with no detection measure and no na_reason arguing why detection is impossible (spec 12 hard rule 1).
+base: valid_complete
+remove: []
+expect:
+  errors:
+    - {rule: detection_empty, where: operate.authenticity}

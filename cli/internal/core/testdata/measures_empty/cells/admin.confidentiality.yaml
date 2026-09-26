@@ -1,0 +1,12 @@
+id: admin.confidentiality
+status: assessed
+owner: fixture@example.org
+threat:
+  definition: admin threatens confidentiality
+  manifestations:
+    - admin confidentiality observed
+defense:
+  detection: []
+  countermeasures: []
+  recovery: []
+na_reason: Nothing an operator does here can be observed.

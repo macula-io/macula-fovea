@@ -1,0 +1,14 @@
+id: operate.authenticity
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: operate threatens authenticity
+  manifestations:
+    - operate authenticity observed
+defense:
+  detection: []
+  countermeasures:
+    - measure: operate authenticity prevented
+      status: by_design
+      source: fixture
+  recovery: []

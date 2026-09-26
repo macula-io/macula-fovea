@@ -147,6 +147,15 @@ func lintEachCell(h *Header, cells map[string]*Cell) []Finding {
 			if len(c.Threat.Manifestations) == 0 {
 				f = append(f, errf("manifestations_empty", id, "zero manifestations"))
 			}
+			// Spec 12 hard rule 1, no empty answers: an answered cell names
+			// its measures, and detection may be empty only with an na_reason
+			// arguing that detection is structurally impossible.
+			switch {
+			case len(allMeasures(c)) == 0:
+				f = append(f, errf("measures_empty", id, "no detection, countermeasure or recovery measure: the cell answers nothing"))
+			case len(c.Defense.Detection) == 0 && !naJustified(c):
+				f = append(f, errf("detection_empty", id, "no detection measure and no na_reason arguing why detection is impossible"))
+			}
 		}
 		hasRoadmapMeasure := false
 		for _, m := range allMeasures(c) {

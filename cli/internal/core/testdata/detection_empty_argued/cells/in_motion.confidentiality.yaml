@@ -1,0 +1,15 @@
+id: in_motion.confidentiality
+status: assumed
+owner: fixture@example.org
+threat:
+  definition: in motion threatens confidentiality
+  manifestations:
+    - in motion confidentiality observed
+defense:
+  detection: []
+  countermeasures:
+    - measure: in motion confidentiality prevented
+      status: by_design
+      source: fixture
+  recovery: []
+na_reason: A passive tap on a link the system does not own leaves no trace the system can observe.

@@ -1,0 +1,6 @@
+describes: An assessed cell with no measures at all answers nothing, even with an argued na_reason (spec 12 hard rule 1; assessed_all_org cannot fire on zero measures).
+base: valid_complete
+remove: []
+expect:
+  errors:
+    - {rule: measures_empty, where: admin.confidentiality}
