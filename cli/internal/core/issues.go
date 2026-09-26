@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -86,12 +87,20 @@ func isOverdue(c *Cell, today time.Time) bool {
 // RunIssues executes `fovea issues`. Exit 1 on --check failures or errors.
 func RunIssues(o IssuesOpts, stdout, stderr io.Writer) int {
 	w := stdout
-	h, _, err := LoadHeader(o.Dir)
+	h, hf, err := LoadHeader(o.Dir)
 	if err != nil {
-		fmt.Fprintln(w, err)
+		fmt.Fprintln(stderr, err)
 		return 1
 	}
-	cells, _, _ := LoadCells(o.Dir, h)
+	cells, _, cf := LoadCells(o.Dir, h)
+	// Refuse to act on a grid that did not load cleanly. A cell that fails
+	// to parse is absent from cells, and acting would close its issue as
+	// "no longer roadmap"; a wrong cells_dir would close every issue.
+	if load := append(hf, cf...); len(load) > 0 {
+		fmt.Fprintln(stderr, "fovea issues: refusing to act; the assessment did not load cleanly:")
+		printFindings(stderr, load)
+		return 1
+	}
 
 	roadmap := map[string]*Cell{}
 	for id, c := range cells {
@@ -104,14 +113,14 @@ func RunIssues(o IssuesOpts, stdout, stderr io.Writer) int {
 	if o.Repo != "" {
 		parts := strings.SplitN(o.Repo, "/", 2)
 		if len(parts) != 2 {
-			fmt.Fprintf(w, "--repo must be owner/repo, got %q\n", o.Repo)
+			fmt.Fprintf(stderr, "--repo must be owner/repo, got %q\n", o.Repo)
 			return 1
 		}
 		owner, repo = parts[0], parts[1]
 	} else {
 		owner, repo, err = DetectRepo(o.Dir)
 		if err != nil {
-			fmt.Fprintf(w, "detect repo: %v (use --repo owner/name)\n", err)
+			fmt.Fprintf(stderr, "detect repo: %v (use --repo owner/name)\n", err)
 			return 1
 		}
 	}
@@ -119,6 +128,11 @@ func RunIssues(o IssuesOpts, stdout, stderr io.Writer) int {
 	token := o.Token
 	if token == "" {
 		token = os.Getenv("GITHUB_TOKEN")
+	}
+	if token == "" && !o.DryRun {
+		// A missing CI secret must fail the job, not pass as a no-op.
+		fmt.Fprintln(stderr, "fovea issues: no token (set GITHUB_TOKEN or --token); use --dry-run to compute decisions without one")
+		return 1
 	}
 
 	g := NewGH(owner, repo, token)
@@ -131,9 +145,9 @@ func RunIssues(o IssuesOpts, stdout, stderr io.Writer) int {
 		issues, err := g.ListIssues(markerLabel)
 		if err != nil {
 			if o.DryRun {
-				fmt.Fprintf(w, "(dry-run) list issues: %v — proceeding without reconciliation\n", err)
+				fmt.Fprintf(stderr, "(dry-run) list issues: %v; proceeding without reconciliation\n", err)
 			} else {
-				fmt.Fprintf(w, "list issues: %v\n", err)
+				fmt.Fprintf(stderr, "list issues: %v\n", err)
 				return 1
 			}
 		} else {
@@ -147,26 +161,26 @@ func RunIssues(o IssuesOpts, stdout, stderr io.Writer) int {
 	}
 
 	if o.Check {
-		return issuesCheck(w, roadmap, existing, listed)
+		return issuesCheck(w, stderr, roadmap, existing, listed)
 	}
-	return issuesSync(w, o, h, roadmap, existing, listed, g, owner, repo)
+	return issuesSync(w, stderr, o, h, roadmap, existing, g, owner, repo)
 }
 
 // issuesCheck — the anti-theater trap: a roadmap cell whose linked issue is
 // closed while the cell is unchanged fails the build.
-func issuesCheck(w io.Writer, roadmap map[string]*Cell, existing map[string]Issue, listed bool) int {
+func issuesCheck(w, stderr io.Writer, roadmap map[string]*Cell, existing map[string]Issue, listed bool) int {
 	if !listed {
-		fmt.Fprintln(w, "--check without GITHUB_TOKEN: cannot verify issue state")
+		fmt.Fprintln(stderr, "--check without GITHUB_TOKEN: cannot verify issue state")
 		return 1
 	}
 	errs := 0
 	for id, c := range roadmap {
 		if iss, ok := existing[id]; ok && iss.State == "closed" {
-			fmt.Fprintf(w, "error: roadmap cell %s has closed issue #%d — do the work and update the cell, or reopen the issue\n", id, iss.Number)
+			fmt.Fprintf(stderr, "error: roadmap cell %s has closed issue #%d — do the work and update the cell, or reopen the issue\n", id, iss.Number)
 			errs++
 		}
 		if iss, ok := existing[id]; ok && isOverdue(c, time.Now()) && !hasLabel(iss, labelOverdue) {
-			fmt.Fprintf(w, "warning: roadmap cell %s is overdue (review_by %s) but issue #%d is not labelled %s\n", id, c.ReviewBy, iss.Number, labelOverdue)
+			fmt.Fprintf(stderr, "warning: roadmap cell %s is overdue (review_by %s) but issue #%d is not labelled %s\n", id, c.ReviewBy, iss.Number, labelOverdue)
 		}
 	}
 	if errs > 0 {
@@ -176,7 +190,7 @@ func issuesCheck(w io.Writer, roadmap map[string]*Cell, existing map[string]Issu
 	return 0
 }
 
-func issuesSync(w io.Writer, o IssuesOpts, h *Header, roadmap map[string]*Cell, existing map[string]Issue, listed bool, g *GH, owner, repo string) int {
+func issuesSync(w, stderr io.Writer, o IssuesOpts, h *Header, roadmap map[string]*Cell, existing map[string]Issue, g *GH, owner, repo string) int {
 	today := time.Now()
 	ids := make([]string, 0, len(roadmap))
 	for id := range roadmap {
@@ -193,7 +207,7 @@ func issuesSync(w io.Writer, o IssuesOpts, h *Header, roadmap map[string]*Cell, 
 				fmt.Fprintf(w, "would close #%d (cell %s no longer roadmap)\n", iss.Number, id)
 			} else {
 				if _, err := g.CloseIssue(iss.Number); err != nil {
-					fmt.Fprintf(w, "close #%d: %v\n", iss.Number, err)
+					fmt.Fprintf(stderr, "close #%d: %v\n", iss.Number, err)
 					return 1
 				}
 				fmt.Fprintf(w, "closed #%d (cell %s no longer roadmap)\n", iss.Number, id)
@@ -205,7 +219,7 @@ func issuesSync(w io.Writer, o IssuesOpts, h *Header, roadmap map[string]*Cell, 
 	for _, id := range ids {
 		c := roadmap[id]
 		overdue := isOverdue(c, today)
-		cellPath := o.Dir + "/" + h.CellsDir + c.ID + ".yaml"
+		cellPath := filepath.Join(o.Dir, h.CellsDir, c.ID+".yaml")
 		body := issueBody(c, cellPath)
 		labels := labelsFor(c, overdue)
 
@@ -214,12 +228,10 @@ func issuesSync(w io.Writer, o IssuesOpts, h *Header, roadmap map[string]*Cell, 
 		case !exists:
 			if o.DryRun {
 				fmt.Fprintf(w, "would open: %s (%s)\n", id, labelsString(labels))
-			} else if !listed {
-				fmt.Fprintf(w, "would open: %s (no token: set GITHUB_TOKEN to run for real)\n", id)
 			} else {
 				created, err := g.CreateIssue(issueTitle(c), body, labels)
 				if err != nil {
-					fmt.Fprintf(w, "create %s: %v\n", id, err)
+					fmt.Fprintf(stderr, "create %s: %v\n", id, err)
 					return 1
 				}
 				fmt.Fprintf(w, "opened #%d: %s\n", created.Number, id)
@@ -235,7 +247,7 @@ func issuesSync(w io.Writer, o IssuesOpts, h *Header, roadmap map[string]*Cell, 
 					fmt.Fprintf(w, "would update #%d (%s): %s\n", iss.Number, id, labelsString(labels))
 				} else {
 					if _, err := g.UpdateIssue(iss.Number, body, labels); err != nil {
-						fmt.Fprintf(w, "update #%d: %v\n", iss.Number, err)
+						fmt.Fprintf(stderr, "update #%d: %v\n", iss.Number, err)
 						return 1
 					}
 					fmt.Fprintf(w, "updated #%d (%s): %s\n", iss.Number, id, labelsString(labels))
@@ -247,13 +259,11 @@ func issuesSync(w io.Writer, o IssuesOpts, h *Header, roadmap map[string]*Cell, 
 		}
 	}
 
-	mode := ""
+	mode := "sync"
 	if o.DryRun {
 		mode = "dry-run"
-	} else if !listed {
-		mode = "offline"
 	}
-	fmt.Fprintf(w, "fovea issues %s — %s/%s: %d opened, %d updated, %d closed, %d untouched\n",
+	fmt.Fprintf(w, "fovea issues %s, %s/%s: %d opened, %d updated, %d closed, %d untouched\n",
 		mode, owner, repo, opened, updated, closed, untouched)
 	return 0
 }

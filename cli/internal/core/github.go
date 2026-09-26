@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"time"
 )
 
 // ---- GitHub REST client (stdlib only) ----
@@ -24,6 +25,11 @@ type Issue struct {
 	Title  string  `json:"title"`
 	Body   string  `json:"body"`
 	Labels []Label `json:"labels"`
+	// PullRequest is set when the listing entry is a pull request: the
+	// issues endpoint returns both, and fovea only ever acts on issues.
+	PullRequest *struct {
+		URL string `json:"url"`
+	} `json:"pull_request,omitempty"`
 }
 
 type GH struct {
@@ -32,8 +38,12 @@ type GH struct {
 	hc                 *http.Client
 }
 
+// apiTimeout bounds every GitHub call, so a hung API fails the job
+// instead of holding the runner until its own timeout.
+const apiTimeout = 30 * time.Second
+
 func NewGH(owner, repo, token string) *GH {
-	return &GH{owner: owner, repo: repo, token: token, base: "https://api.github.com", hc: &http.Client{}}
+	return &GH{owner: owner, repo: repo, token: token, base: "https://api.github.com", hc: &http.Client{Timeout: apiTimeout}}
 }
 
 func (g *GH) do(method, path string, in, out any) error {
@@ -81,7 +91,11 @@ func (g *GH) ListIssues(label string) ([]Issue, error) {
 		if err := g.do("GET", u, nil, &batch); err != nil {
 			return nil, err
 		}
-		all = append(all, batch...)
+		for _, iss := range batch {
+			if iss.PullRequest == nil {
+				all = append(all, iss)
+			}
+		}
 		if len(batch) < 100 {
 			return all, nil
 		}
