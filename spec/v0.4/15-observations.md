@@ -52,7 +52,7 @@ and deriving its signer key id (`MACULA-KEY-ID-V1`) from the key.
 
 | Key | Type | Value |
 |---|---|---|
-| `system` | text | The assessment's `system`, as its header writes it. |
+| `system` | text | The assessment's `system`, as its header writes it: `[a-z][a-z0-9_.-]*` (14-instantiation). |
 | `claim_id` | text | The declaration's `claim`: `[a-z][a-z0-9_]*`. |
 | `realm_id` | bytes, 32 | The wire realm id: SHA-256 of the realm's name. |
 | `state` | unsigned | 0 `holding`, 1 `broken`, 2 `unknown`. |

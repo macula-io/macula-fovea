@@ -1,0 +1,6 @@
+describes: "An observation's subject starts with the system name and a 0x00, so a v0.4 system name is a lowercase identifier: [a-z][a-z0-9_.-]*."
+base: valid_complete_v0_4
+remove: []
+expect:
+  errors:
+    - {rule: header_system_invalid, where: fovea.yaml}

@@ -37,6 +37,11 @@ uses to know how many cells to expect — 16 columns × 5 core attributes =
 An assessment with probe declarations says, in its header, **what** they
 observe and **what** an observer may publish.
 
+From v0.4 the header's `system` is a lowercase identifier,
+`[a-z][a-z0-9_.-]*`: observations carry it first in their record's subject,
+before a 0x00 byte (15-observations), so it can hold no 0x00 and one spelling
+names one assessment.
+
 ```yaml
 targets:
   fleet_stations:                  # a name probes refer to

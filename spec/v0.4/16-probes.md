@@ -33,11 +33,22 @@ client's handshake only in the group. An attempt returns one of:
 *some* ML-DSA-87 key. After it, the observer sends the opener a macula client
 sends on its control stream and reads the station's `challenge`, as macula's
 `plans/DESIGN_PQ_HANDSHAKE_FRAMES.md` specifies it. The attempt is `accepted`
-only if the challenge's `identity_key` derives to the node id the target
-declares for this address (14-instantiation) and its `tls_binding` verifies for
-the leaf certificate this connection presented, both exactly as a macula
-client checks them. The observer then closes without sending CONNECT, so it
+only if, exactly as a macula client checks them:
+
+- the challenge's `identity_key` derives to the node id the target declares
+  for this address (14-instantiation);
+- its `tls_binding` verifies under that key, names that node id, is for the
+  leaf certificate this connection presented, and is within its
+  `not_before`/`not_after` at the time of the attempt;
+- its `tls_status` verifies under that key, is for that binding, and is
+  within its `issued_at`/`expires_at` at the time of the attempt. The observer then closes without sending CONNECT, so it
 never asks the station to admit it: the probe never carries a session.
+
+**What a station sees.** A classical attempt ends inside TLS. A post-quantum
+attempt is a connection that sent the opener, received the challenge and
+closed before CONNECT; stations count and log it as such. At the policy's
+cadence (14-instantiation) that is a handful of connections per station per
+round, which is not an attack and should not be read as one.
 
 **Vocabulary.** An expectation names groups from this list, each at most
 once across `accepted` and `refused`, and an expectation with `refused`

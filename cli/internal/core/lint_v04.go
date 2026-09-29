@@ -43,6 +43,11 @@ var publishModes = map[string]bool{"every_result": true, "state_changes": true}
 
 var claimID = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
 
+// systemName is a v0.4 header's system (spec 14): observations put it first
+// in their record's subject, before a 0x00, so it can hold no 0x00 and one
+// spelling names one assessment.
+var systemName = regexp.MustCompile(`^[a-z][a-z0-9_.-]*$`)
+
 // nodeID is a node id as a header writes it: 32 bytes, lowercase hex.
 var nodeID = regexp.MustCompile(`^[0-9a-f]{64}$`)
 
@@ -63,6 +68,9 @@ func lintV04(h *Header, cells map[string]*Cell) []Finding {
 		return lintFieldsBeforeV04(h, cells)
 	}
 	var f []Finding
+	if !systemName.MatchString(h.System) {
+		f = append(f, errf(ruleHeaderSystemInvalid, "fovea.yaml", "system %q is not a lowercase identifier ([a-z][a-z0-9_.-]*); observations carry it in their record's subject", h.System))
+	}
 	f = append(f, lintTargets(h)...)
 	f = append(f, lintPolicy(h)...)
 	claims := map[string][]string{} // valid claim id -> cell ids, one per declaration

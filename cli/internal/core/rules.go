@@ -67,6 +67,7 @@ var (
 	ruleTargetKindUnknown                 = newRule("target_kind_unknown")
 	ruleTargetAddressInvalid              = newRule("target_address_invalid")
 	ruleTargetNodeIDInvalid               = newRule("target_node_id_invalid")
+	ruleHeaderSystemInvalid               = newRule("header_system_invalid")
 	rulePolicyObserverInvalid             = newRule("policy_observer_invalid")
 	rulePolicyMissing                     = newRule("policy_missing")
 	rulePolicyPublishUnknown              = newRule("policy_publish_unknown")

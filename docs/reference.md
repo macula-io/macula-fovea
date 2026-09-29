@@ -89,6 +89,7 @@ v0.4 rules (evidence, probe declarations, targets, policy; spec 12, 14, 16):
 | `target_kind_unknown` | a target's `kind` is not `macula_station` |
 | `target_address_invalid` | a target names no station, or a station address is not a unicast IP literal and port in canonical form (`192.0.2.10:4433`, `[2001:db8::10]:4433`), or an address appears twice in the header |
 | `target_node_id_invalid` | a station's `node_id` is not 64 lowercase hex digits |
+| `header_system_invalid` | a v0.4 header's `system` is not `[a-z][a-z0-9_.-]*` (observations carry it in their record's subject) |
 | `policy_missing` | the assessment declares probes but no `policy` |
 | `policy_observer_invalid` | the assessment declares probes and `policy.observers` names none, or an observer is not a node id (64 lowercase hex digits) |
 | `policy_publish_unknown` | `policy.publish` is not `every_result` or `state_changes` |
