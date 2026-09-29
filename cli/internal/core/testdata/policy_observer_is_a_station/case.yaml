@@ -1,0 +1,6 @@
+describes: "An observer that is also a declared station would vouch for itself."
+base: valid_complete_v0_4
+remove: []
+expect:
+  errors:
+    - {rule: policy_observer_invalid, where: fovea.yaml}

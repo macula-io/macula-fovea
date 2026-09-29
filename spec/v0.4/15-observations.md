@@ -5,8 +5,8 @@ on the running system, on the policy's cadence (14-instantiation), and turns
 each round into an **observation**: one claim, one station, one state
 (`holding`, `broken`, `unknown`; 00-overview), judged as the probe's registry
 entry says (16-probes). This section defines the observation as a signed
-record, so that anyone holding the realm's public key can verify it offline,
-without the mesh, the observer or the assessment's repository.
+record, so that anyone holding the realm's public key and the assessment can
+verify it offline, without the mesh or the observer.
 
 ## What an observer does
 
@@ -78,8 +78,12 @@ A verifier holds, beside the observation's record bytes:
   type `0x05`, signed by the realm key). The realm publishes it in the DHT
   under the member's endorsement slot and renews it before it expires; an
   observer may ship it beside its observations;
-- the **observer node ids** it trusts for this assessment: the header's
-  `policy.observers` (14-instantiation) of the revision the observation names.
+- the **assessment header** of the revision the observation names
+  (`assessment_sha`), and the probe declaration in it: a git checkout of the
+  assessment, which is offline too. Its `policy.observers` (14-instantiation)
+  are the observer node ids the verifier trusts. Observers come from the
+  revision the record names, whatever revision the verifier or the observer
+  has adopted since.
 
 It accepts the observation only if every step holds, at **T = the
 observation's `created_at`**, so an observation stays verifiable after the
@@ -105,10 +109,18 @@ endorsement that covered it has expired:
    would refuse every genuine observation.
 6. `valid_from` ≤ T ≤ `valid_until`, and the endorsement's window is at most
    30 days.
-7. That node id is one of the observer node ids the verifier trusts.
+7. That node id is one of the header's `policy.observers`.
 8. `outcomes` has exactly the groups of `expected`, and `state` is what
    16-probes' judgement of `probe` at `probe_version` gives for those
    outcomes against that expectation.
+9. The record is the header's own claim. The header's `system` is the
+   payload's; the header holds one probe declaration whose `claim` is
+   `claim_id`, whose `probe` and `version` are `probe` and `probe_version` (a
+   probe and version the verifier's registry knows, 16-probes), and whose
+   `expect` is `expected`, the same groups on the same sides; and that
+   declaration's target lists `target_address` with `node_id` equal to
+   `station_node`. A revision the verifier cannot obtain refuses here: the
+   record's expectation is then the observer's word, not the claim's.
 
 A refusal names the first step that failed. What an accepted observation
 proves: an observer this assessment trusts, admitted to the realm, signed at

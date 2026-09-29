@@ -32,15 +32,15 @@ Commit to the regime *before* any cell exists: which attributes are core
 uses to know how many cells to expect — 16 columns × 5 core attributes =
 80 base cells, plus 16 per enabled extension.
 
+**`system` (v0.4).** From v0.4 the header's `system` is a lowercase identifier,
+`[a-z][a-z0-9_.-]*`: observations carry it first in their record's subject,
+before a 0x00 byte (15-observations), so it can hold no 0x00 and one spelling
+names one assessment.
+
 ### Targets and policy (v0.4)
 
 An assessment with probe declarations says, in its header, **what** they
 observe and **what** an observer may publish.
-
-From v0.4 the header's `system` is a lowercase identifier,
-`[a-z][a-z0-9_.-]*`: observations carry it first in their record's subject,
-before a 0x00 byte (15-observations), so it can hold no 0x00 and one spelling
-names one assessment.
 
 ```yaml
 targets:
@@ -75,8 +75,9 @@ policy:
   address changes, and a changed address is a new assessment revision.
 - **`publish`**: `every_result` publishes every observation; `state_changes`
   publishes an observation whose state differs from the station's previous one
-  for the claim, and republishes the latest observation before its record
-  expires, so a reader always finds a live one. An observer signs and keeps
+  for the claim, and before the latest record expires signs a fresh record
+  of the same round (a new `version` and `created_at`; the same
+  `observed_at` and outcomes), so a reader always finds a live one. An observer signs and keeps
   every observation either way.
 - **`cadence`**: how often a claim is observed, from a minute to seven days.
   Days, hours, minutes and seconds only (`P1D`, `PT1H`, `PT15M`), since a

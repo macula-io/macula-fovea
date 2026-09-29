@@ -41,7 +41,10 @@ only if, exactly as a macula client checks them:
   leaf certificate this connection presented, and is within its
   `not_before`/`not_after` at the time of the attempt;
 - its `tls_status` verifies under that key, is for that binding, and is
-  within its `issued_at`/`expires_at` at the time of the attempt. The observer then closes without sending CONNECT, so it
+  within its `issued_at`/`expires_at` at the time of the attempt;
+- and every other check a macula client makes on a challenge passes, among
+  them that the leaf does not carry the identity key itself (key purpose
+  reuse) and that the binding's `use` is `tls`. The observer then closes without sending CONNECT, so it
 never asks the station to admit it: the probe never carries a session.
 
 **What a station sees.** A classical attempt ends inside TLS. A post-quantum

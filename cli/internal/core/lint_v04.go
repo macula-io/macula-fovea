@@ -118,9 +118,18 @@ func lintV04(h *Header, cells map[string]*Cell) []Finding {
 		if probes > 0 && len(h.Policy.Observers) == 0 {
 			f = append(f, errf(rulePolicyObserverInvalid, "fovea.yaml", "policy.observers names no observer: a verifier could not tell this assessment's observations from any realm member's"))
 		}
+		stations := map[string]bool{}
+		for _, t := range h.Targets {
+			for _, st := range t.Stations {
+				stations[st.NodeID] = true
+			}
+		}
 		for _, o := range h.Policy.Observers {
-			if !nodeID.MatchString(o) {
+			switch {
+			case !nodeID.MatchString(o):
 				f = append(f, errf(rulePolicyObserverInvalid, "fovea.yaml", "policy.observers entry %q is not a node id (64 lowercase hex digits)", o))
+			case stations[o]:
+				f = append(f, errf(rulePolicyObserverInvalid, "fovea.yaml", "policy.observers entry %q is a declared station: a station cannot observe itself", o))
 			}
 		}
 	}

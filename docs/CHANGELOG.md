@@ -14,15 +14,27 @@ Spec v0.4 lets a claim be re-checked, not only written.
 - **Evidence on measures:** `doc`, `test`, `scenario` or `probe`.
 - **`assessed` needs executable evidence:** a `test`, `scenario` or `probe`
   on one of the cell's measures (`assessed_without_executable_evidence`).
-- **Targets and a publication policy** in the header: what probes observe,
-  by IP address in one canonical form, and what an observer publishes.
-- **Observations** (spec 15): each is a macula record of domain type
-  0x23, signed by the observer's node identity key and bound to the realm
-  by its realm member endorsement, verifiable offline. The contract
-  section is marked as the one `fovea verify` depends on.
-- **The probe registry** (spec 16): `kx_group` v1, one group per attempt,
-  and how a round is judged `holding`, `broken` or `unknown`.
-- 16 new lint rules, each with its case; v0.2 and v0.3 assessments refuse
+- **`system` is an identifier** (`[a-z][a-z0-9_.-]*`) in a v0.4 header.
+- **Targets and a publication policy** in the header: targets name each
+  station by its address (an IP literal in one canonical form) and its node
+  id; the policy says what an observer publishes, how often it observes (a
+  minute to seven days), which claims are suspended, and which observers'
+  node ids a reader trusts.
+- **Observations** (spec 15): each is a macula record of domain type 0x23,
+  signed by the observer's node identity key and bound to the realm by its
+  realm member endorsement. It carries `system`, `claim_id`, the station's
+  address and `station_node`, the declaration's `expected`, the `outcomes`
+  and the `state`. A verifier checks it offline against the realm key and
+  the assessment revision it names: that the signer is a listed observer,
+  that the state follows from the outcomes, and that the record is that
+  revision's own claim. The contract section is marked as the one
+  `fovea verify` depends on.
+- **The probe registry** (spec 16): `kx_group` v1, one group per attempt;
+  an attempt is `accepted` only when the declared station proves its
+  identity in its handshake challenge; `refused` is handshake_failure only;
+  and a round is judged `holding`, `broken` or `unknown`, with what each
+  does not prove.
+- 19 new lint rules, each with its case; v0.2 and v0.3 assessments refuse
   the new fields (`field_needs_v0_4`) rather than ignore them.
 - The Cucumber report cross-check and `pct_executable_evidence` wait for
   v0.5; the check, if it lands, is `fovea check-evidence`, since `fovea

@@ -66,7 +66,7 @@ type Policy struct {
 	Cadence   string   `yaml:"cadence"`
 	Suspended []string `yaml:"suspended"`
 	// Observers are the node ids whose observations a reader of this
-	// assessment trusts (spec 15, verification step 5).
+	// assessment trusts (spec 15, verification step 7).
 	Observers []string `yaml:"observers"`
 }
 
