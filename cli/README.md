@@ -17,11 +17,12 @@ cells). It is the reference implementation of the spec: where the spec says
 | `fovea score <dir> [--json]` | Computes the [scorecard](../spec/v0.4/13-scorecard.md): expected/present/missing cells, `pct_unassessed`, `na_unjustified`, `pct_by_design`, oldest `review_by` and overdue roadmaps, cells per attribute and per family. Missing cells count as unassessed. With `--json`, stdout is valid JSON even when lint fails. | lint had errors |
 | `fovea render <dir> [--format md\|html\|json]` | The scorecard, in markdown, HTML (for GitHub job summaries, every spec version) or JSON. v0.2 headers get the frozen worst-RAG grid; v0.3 and v0.4 headers get the coverage-aware grid (`R 2/6`) and the complete open-gaps list, which carries every header lint error. `--html` and `--json` are short for the formats. The scorecard is written even when lint fails; the findings then go to stderr. | lint had errors |
 | `fovea issues <dir> [--dry-run] [--check] [--repo o/r] [--token t]` | Syncs `roadmap` cells to GitHub issues, idempotently via a `<!-- fovea-cell: <id> -->` body marker. Refuses to act when the header or any cell fails to load. `--check` fails when a roadmap cell's linked issue is closed. See [issues-bridge](../docs/issues-bridge.md). | load findings, no token without `--dry-run`, `--check` trap, API errors |
+| `fovea verify --realm-key f --realm name --profile p --endorsement f --repo dir --path dir <observation>` | Verifies a signed claim observation offline, the nine steps of [15-observations](../spec/v0.4/15-observations.md) at the observation's `created_at`, against the realm's public key, the observer's realm member endorsement and the assessment revision the record names, read from the git repository's object store at that commit (never from a checkout). Files hold bytes as hex or raw. Needs `git` on PATH. Prints the accepted observation; a refusal names the first step that failed. | refused (1), usage (2) |
 
 `dir` defaults to the current directory and may come before or after the
 flags. Each command takes only its own flags (`lint --github`, `score
 --json`, `render --json|--html|--format`); any other flag exits 2 naming
-it. `--help` and `--help-issues` print usage and exit 0; no command or an
+it (verify takes only its own, listed in `fovea verify --help`). `--help` and `--help-issues` print usage and exit 0; no command or an
 unknown one exits 2. Results go to stdout; load
 errors, notes and warnings go to stderr, so `fovea score --json dir >
 score.json` stays parseable.

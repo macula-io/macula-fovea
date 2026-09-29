@@ -21,6 +21,7 @@ commands:
   score   <dir>   lint, then compute the scorecard metrics
   render  <dir>   print the scorecard as a markdown grid
   issues  <dir>   sync roadmap/overdue cells to GitHub issues
+  verify  <obs>   verify a signed claim observation offline (fovea verify --help)
   --version       the tool version and the spec versions it reads
 
 dir defaults to the current directory. flags: --json on score and render;
@@ -106,6 +107,8 @@ func run(argv []string, stdout, stderr io.Writer) int {
 	case argv[0] == "--help-issues":
 		fmt.Fprintln(stdout, issuesUsage)
 		return 0
+	case argv[0] == "verify":
+		return core.RunVerify(argv[1:], stdout, stderr)
 	}
 	dir := "."
 	jsonOut := false
