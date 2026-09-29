@@ -30,7 +30,7 @@ func fixtureRepo(t *testing.T) string {
 	t.Helper()
 	dir := filepath.Join(t.TempDir(), "assessments")
 	bundle, _ := filepath.Abs(filepath.Join("testdata", "verify", "assessment.bundle"))
-	if out, err := exec.Command("git", "clone", "-q", bundle, dir).CombinedOutput(); err != nil {
+	if out, err := exec.Command("git", "clone", "-q", "-b", "main", bundle, dir).CombinedOutput(); err != nil {
 		t.Fatalf("git clone: %v: %s", err, out)
 	}
 	return dir
@@ -40,7 +40,7 @@ func input(t *testing.T, repo, observation, endorsement string) VerifyInput {
 	return VerifyInput{
 		Observation: vector(t, observation), Endorsement: vector(t, endorsement),
 		RealmKey: vector(t, "realm_key"), RealmName: fixtureRealm, Profile: profile.PQHybrid,
-		Assessment: GitRevision(repo, "fixture-kx"), NowMs: 1 << 62,
+		Assessment: GitRevision(repo, "HEAD", "fixture-kx"), NowMs: 1 << 62,
 	}
 }
 
@@ -88,7 +88,7 @@ func TestEachDefectIsRefusedAtTheFirstStepItFails(t *testing.T) {
 		{"an endorsement of another node", "obs_holding", "endorsement_b", nil, 5},
 		{"an endorsement expired at T", "obs_holding", "s6_endorsement_expired", nil, 6},
 		{"an endorsed node the policy does not name", "obs_by_b", "endorsement_b", nil, 7},
-		{"a revision the repository does not hold", "s9_unknown_sha", "endorsement", nil, 7},
+		{"a revision the repository does not hold", "s9_unknown_sha", "endorsement", nil, 9},
 		{"a state the outcomes do not give", "s8_state_wrong", "endorsement", nil, 8},
 		{"outcomes of other groups", "s8_outcome_groups", "endorsement", nil, 8},
 		{"an expectation that is not the claim's", "s9_expected_differs", "endorsement", nil, 9},
@@ -109,6 +109,26 @@ func TestEachDefectIsRefusedAtTheFirstStepItFails(t *testing.T) {
 				t.Fatalf("refused at step %d, want %d: %v", refusal.Step, c.step, refusal)
 			}
 		})
+	}
+}
+
+// A commit the object store holds but the ref's history does not, such as
+// an unmerged pull request head, is not the assessment's revision.
+func TestARevisionOutsideTheRefsHistoryIsRefused(t *testing.T) {
+	repo := fixtureRepo(t)
+	for _, args := range [][]string{{"checkout", "-q", "--orphan", "elsewhere"},
+		{"-c", "user.name=fixture", "-c", "user.email=fixture@example.org", "commit", "-q", "--allow-empty", "-m", "unrelated"}} {
+		if out, err := exec.Command("git", append([]string{"-C", repo}, args...)...).CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v: %s", args, err, out)
+		}
+	}
+	in := input(t, repo, "obs_holding", "endorsement")
+	if _, refusal := VerifyObservation(in); refusal == nil || refusal.Step != 9 {
+		t.Fatalf("got %v, want a refusal at step 9", refusal)
+	}
+	in.Assessment = GitRevision(repo, "main", "fixture-kx")
+	if _, refusal := VerifyObservation(in); refusal != nil {
+		t.Fatalf("in main's history: %v", refusal)
 	}
 }
 

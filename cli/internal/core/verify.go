@@ -180,12 +180,10 @@ func VerifyObservation(in VerifyInput) (*Verified, *Refusal) {
 		return nil, refuse(6, "the endorsement admits %s to %s, not %s", ms(from), ms(until), ms(created))
 	}
 
-	// 7. An observer the named revision trusts.
-	h, cells, err := in.Assessment(p.assessmentSHA)
-	if err != nil {
-		return nil, refuse(7, "assessment revision %x cannot be read: %v", p.assessmentSHA, err)
-	}
-	if h.Policy == nil || !slices.Contains(h.Policy.Observers, hex.EncodeToString(observer[:])) {
+	// 7. An observer the named revision trusts. A revision that cannot be
+	// read refuses at step 9, as spec 15 says, once step 8 has run.
+	h, cells, unreadable := in.Assessment(p.assessmentSHA)
+	if unreadable == nil && (h.Policy == nil || !slices.Contains(h.Policy.Observers, hex.EncodeToString(observer[:]))) {
 		return nil, refuse(7, "%x is not one of revision %x's policy.observers", observer, p.assessmentSHA)
 	}
 
@@ -202,6 +200,9 @@ func VerifyObservation(in VerifyInput) (*Verified, *Refusal) {
 	}
 
 	// 9. The revision's own claim, on a station it declares.
+	if unreadable != nil {
+		return nil, refuse(9, "assessment revision %x cannot be read: %v", p.assessmentSHA, unreadable)
+	}
 	if reason := declared(h, cells, p); reason != "" {
 		return nil, refuse(9, "%s", reason)
 	}
@@ -417,13 +418,25 @@ const maxAssessmentBytes = 16 << 20
 
 // GitRevision reads the assessment at dir inside the git repository repo, at
 // the commit a record names, from git's object store: no checkout is trusted,
-// only the commit id.
-func GitRevision(repo, dir string) Revision {
+// only the commit id. The commit must be in the history of ref: an object
+// store can also hold commits nobody merged, such as every pull request head
+// a mirror clone fetches, and a header there can name any observer.
+func GitRevision(repo, ref, dir string) Revision {
 	return func(sha []byte) (*Header, map[string]*Cell, error) {
 		commit := hex.EncodeToString(sha)
 		kind, err := exec.Command("git", "-C", repo, "cat-file", "-t", commit).Output()
 		if err != nil || strings.TrimSpace(string(kind)) != "commit" {
 			return nil, nil, fmt.Errorf("%s holds no commit %s", repo, commit)
+		}
+		var stderr bytes.Buffer
+		ancestry := exec.Command("git", "-C", repo, "merge-base", "--is-ancestor", commit, ref)
+		ancestry.Stderr = &stderr
+		var exit *exec.ExitError
+		switch err := ancestry.Run(); {
+		case errors.As(err, &exit) && exit.ExitCode() == 1:
+			return nil, nil, fmt.Errorf("commit %s is not in the history of %s", commit, ref)
+		case err != nil:
+			return nil, nil, fmt.Errorf("the history of %s cannot be read: %v: %s", ref, err, strings.TrimSpace(stderr.String()))
 		}
 		tarball, err := exec.Command("git", "-C", repo, "archive", "--format=tar", commit+":"+dir).Output()
 		if err != nil {
@@ -521,13 +534,14 @@ verifies a claim observation offline (spec v0.4, 15-observations): accepted
 only if all nine steps hold at the observation's created_at. Files hold
 bytes as hex or raw.
 
-flags (all required):
+flags (required but --ref):
   --realm-key f     the realm's public key as carried
   --realm name      the realm's name (its realm id is SHA-256 of it)
   --profile p       pq_hybrid or pq_pure
   --endorsement f   the observer's realm member endorsement record
   --repo dir        a git repository holding the assessment revision
   --path dir        the assessment's directory inside that repository
+  --ref r           the ref whose history must hold that revision (default HEAD)
 
 exit 0 accepted, 1 refused (the first failing step is named), 2 usage.`
 
@@ -554,7 +568,7 @@ func RunVerify(args []string, stdout, stderr io.Writer) int {
 			return 2
 		}
 		switch name {
-		case "--realm-key", "--realm", "--profile", "--endorsement", "--repo", "--path":
+		case "--realm-key", "--realm", "--profile", "--endorsement", "--repo", "--path", "--ref":
 			flags[name] = value
 		default:
 			fmt.Fprintf(stderr, "fovea verify: unknown flag %s\n\n%s\n", name, verifyUsage)
@@ -576,8 +590,12 @@ func RunVerify(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "fovea verify: %v\n", err)
 		return 2
 	}
+	ref := flags["--ref"]
+	if ref == "" {
+		ref = "HEAD"
+	}
 	in := VerifyInput{RealmName: flags["--realm"], Profile: p, NowMs: time.Now().UnixMilli(),
-		Assessment: GitRevision(flags["--repo"], flags["--path"])}
+		Assessment: GitRevision(flags["--repo"], ref, flags["--path"])}
 	for _, r := range []struct {
 		file string
 		into *[]byte
@@ -595,7 +613,7 @@ func RunVerify(args []string, stdout, stderr io.Writer) int {
 	fmt.Fprintf(stdout, "accepted: %s\n", v.State)
 	fmt.Fprintf(stdout, "  claim       %s / %s on %s\n", v.System, v.ClaimID, v.TargetAddress)
 	fmt.Fprintf(stdout, "  observer    %x\n", v.Observer)
-	fmt.Fprintf(stdout, "  assessment  %x\n", v.AssessmentSHA)
+	fmt.Fprintf(stdout, "  assessment  %x, in the history of %s\n", v.AssessmentSHA, ref)
 	fmt.Fprintf(stdout, "  observed    %s, signed %s\n", ms(v.ObservedAt), ms(v.CreatedAt))
 	gs := make([]string, 0, len(v.Outcomes))
 	for g := range v.Outcomes {
