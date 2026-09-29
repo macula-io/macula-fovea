@@ -91,7 +91,7 @@ v0.4 rules (evidence, probe declarations, targets, policy; spec 12, 14, 16):
 | `target_node_id_invalid` | a station's `node_id` is not 64 lowercase hex digits |
 | `header_system_invalid` | a v0.4 header's `system` is not `[a-z][a-z0-9_.-]*` (observations carry it in their record's subject) |
 | `policy_missing` | the assessment declares probes but no `policy` |
-| `policy_observer_invalid` | the assessment declares probes and `policy.observers` names none, or an observer is not a node id (64 lowercase hex digits) |
+| `policy_observer_invalid` | the assessment declares probes and `policy.observers` names none, or an observer is not a node id (64 lowercase hex digits), or an observer is a declared station |
 | `policy_publish_unknown` | `policy.publish` is not `every_result` or `state_changes` |
 | `policy_cadence_invalid` | `policy.cadence` is not an ISO 8601 duration (days to seconds) from a minute to seven days |
 | `policy_suspended_unknown_claim` | `policy.suspended` names a claim no probe declares |

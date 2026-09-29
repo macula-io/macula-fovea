@@ -89,7 +89,8 @@ policy:
 - **`observers`**: the node ids of the observers whose observations of this
   assessment a reader trusts. Every admitted member of a realm can sign a
   record of the observation type; this list is what tells a verifier which
-  ones speak for this assessment (15-observations).
+  ones speak for this assessment (15-observations). An observer is never one
+  of the declared stations: a station cannot observe itself.
 
 A header with probe declarations and no `policy`, or a policy naming no
 observer, is a lint error: nothing would say what may be published or whose
