@@ -1,0 +1,7 @@
+describes: "A probe declaration with an invalid claim id still needs a policy: the typo is one finding, the missing policy another."
+base: valid_complete_v0_4
+remove: []
+expect:
+  errors:
+    - {rule: claim_id_invalid, where: in_motion.confidentiality}
+    - {rule: policy_missing, where: fovea.yaml}

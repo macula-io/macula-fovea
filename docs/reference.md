@@ -87,10 +87,12 @@ v0.4 rules (evidence, probe declarations, targets, policy; spec 12, 14, 16):
 | `claim_id_invalid` | a probe's `claim` is not `[a-z][a-z0-9_]*` |
 | `claim_id_duplicate` | two probe declarations claim the same id; reported at each |
 | `target_kind_unknown` | a target's `kind` is not `macula_station` |
-| `target_address_invalid` | a target has no addresses, or one that is not an IP literal and port in canonical form (`192.0.2.10:4433`, `[2001:db8::10]:4433`) |
+| `target_address_invalid` | a target names no station, or a station address is not a unicast IP literal and port in canonical form (`192.0.2.10:4433`, `[2001:db8::10]:4433`), or an address appears twice in the header |
+| `target_node_id_invalid` | a station's `node_id` is not 64 lowercase hex digits |
 | `policy_missing` | the assessment declares probes but no `policy` |
+| `policy_observer_invalid` | the assessment declares probes and `policy.observers` names none, or an observer is not a node id (64 lowercase hex digits) |
 | `policy_publish_unknown` | `policy.publish` is not `every_result` or `state_changes` |
-| `policy_cadence_invalid` | `policy.cadence` is not an ISO 8601 duration (days to seconds) of at least a minute |
+| `policy_cadence_invalid` | `policy.cadence` is not an ISO 8601 duration (days to seconds) from a minute to seven days |
 | `policy_suspended_unknown_claim` | `policy.suspended` names a claim no probe declares |
 
 An overdue `review_by` is not a lint error; the scorecard reports it
@@ -122,8 +124,10 @@ per-attribute and per-family counts.
    every written cell before expecting a clean run.
 3. **Cell id = filename.** `cells/in_motion.confidentiality.yaml` must
    contain `id: in_motion.confidentiality` — mismatch is a lint error.
-4. **Spec version in the header.** `fovea: "0.3"` — 0.2 headers get the
-   frozen 0.2 scorecard; opt in deliberately.
+4. **Spec version in the header.** `fovea: "0.4"` — 0.2 headers get the
+   frozen 0.2 scorecard, 0.3 and 0.4 the coverage-aware one; 0.4 adds
+   evidence, probes, targets and a policy, and an older header refuses those
+   fields. Opt in deliberately.
 5. **`na` cells keep empty definitions.** Lint tolerates an empty threat
    on an `na` cell: the `na_reason` is the content, and it must be real
    text, not whitespace.

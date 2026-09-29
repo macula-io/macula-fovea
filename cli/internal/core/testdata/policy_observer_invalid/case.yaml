@@ -1,0 +1,6 @@
+describes: "Observations are trusted from the observers the policy names, by node id: 64 lowercase hex digits."
+base: valid_complete_v0_4
+remove: []
+expect:
+  errors:
+    - {rule: policy_observer_invalid, where: fovea.yaml}

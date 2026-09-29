@@ -1,0 +1,6 @@
+describes: "A cadence over seven days: an observation's record lives at most seven days, so a claim could go unobserved while its last record expires."
+base: valid_complete_v0_4
+remove: []
+expect:
+  errors:
+    - {rule: policy_cadence_invalid, where: fovea.yaml}

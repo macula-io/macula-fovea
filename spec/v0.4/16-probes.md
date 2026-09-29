@@ -12,8 +12,9 @@ state (00-overview): `holding`, `broken` or `unknown`.
 
 ## `kx_group`, version 1
 
-**Observes** a `macula_station` target: which key exchange groups the
-station completes a QUIC/TLS 1.3 handshake on.
+**Observes** a `macula_station` target, station by station: which key
+exchange groups the station declared at an address completes a QUIC/TLS 1.3
+handshake on, as that station.
 
 **One attempt** offers exactly one group, because the group a QUIC handshake
 settled on cannot be read by the client; an attempt that offers one group and
@@ -24,12 +25,19 @@ client's handshake only in the group. An attempt returns one of:
 
 | Outcome | Meaning |
 |---|---|
-| `accepted` | The station completed the handshake on the one group offered, and proved possession of its ML-DSA-87 key. |
-| `refused` | The station ended the handshake with TLS alert handshake_failure (40), and only that alert. |
-| `inconclusive` | Anything else: no answer in time, another alert, another close, or a failure on the observer's side. |
+| `accepted` | The handshake completed on the one group offered, **and the answering endpoint proved it is the station the target declares at this address** (below). |
+| `refused` | The endpoint ended the handshake with TLS alert handshake_failure (40), and only that alert. |
+| `inconclusive` | Anything else: no answer in time, another alert (a stack may send insufficient_security, 71, for no common group), another close, a failure on the observer's side, or a completed handshake that did not prove the declared station. |
 
-An observer closes an accepted connection at once: the probe never carries a
-session.
+**Proving the station.** Completing TLS proves only that the endpoint holds
+*some* ML-DSA-87 key. After it, the observer sends the opener a macula client
+sends on its control stream and reads the station's `challenge`, as macula's
+`plans/DESIGN_PQ_HANDSHAKE_FRAMES.md` specifies it. The attempt is `accepted`
+only if the challenge's `identity_key` derives to the node id the target
+declares for this address (14-instantiation) and its `tls_binding` verifies for
+the leaf certificate this connection presented, both exactly as a macula
+client checks them. The observer then closes without sending CONNECT, so it
+never asks the station to admit it: the probe never carries a session.
 
 **Vocabulary.** An expectation names groups from this list, each at most
 once across `accepted` and `refused`, and an expectation with `refused`
@@ -44,8 +52,8 @@ refusal counts only beside an acceptance):
 | `secp256r1` | classical |
 | `secp384r1` | classical |
 
-**A round** attempts every expected group once against one address of the
-target. It is judged:
+**A round** attempts every expected group once against one station of the
+target (its address, as that node id). It is judged:
 
 | State | When |
 |---|---|
@@ -55,11 +63,13 @@ target. It is judged:
 
 Why the rules are asymmetric:
 
-- **An acceptance is authenticated; a refusal is not.** The station signs an
-  accepted handshake with its ML-DSA-87 key. A refusal travels in a QUIC
-  Initial-space close that anyone on the path who sees the connection id can
-  forge. So only an acceptance can break a claim, and a refusal can only
-  support one.
+- **An acceptance is authenticated; a refusal is not.** An accepted attempt is
+  bound to the declared station by its identity key and TLS binding. A refusal
+  travels in a QUIC Initial-space close that anyone on the path who sees the
+  connection id can forge. So only an acceptance can break a claim, and a
+  refusal can only support one. That makes `holding` as strong as the path
+  between observer and station: an on-path party that forges handshake_failure
+  for the classical attempts makes a false `holding`. `broken` it cannot make.
 - **handshake_failure has three causes.** A station sends it when no key
   exchange group, no signature scheme or no cipher suite is in common. A
   classical group's `refused` is therefore evidence about key exchange only in
@@ -67,7 +77,15 @@ Why the rules are asymmetric:
   which proves the signature scheme and cipher suite are shared and leaves the
   group as the only difference. `holding` requires exactly that.
 - **Silence is not a verdict.** A round with any `inconclusive` attempt, or
-  a post-quantum group refused, is `unknown`, never `holding`.
+  a group expected `accepted` that was `refused`, is `unknown`, never
+  `holding`.
 
-A target with several addresses is observed address by address: each
-address is its own round and its own observation (15-observations).
+A target with several stations is observed station by station: each is its
+own round and its own observation (15-observations).
+
+**What "only" covers.** `holding` says the station refused every classical
+group the expectation lists and completed every post-quantum one it lists;
+it says nothing about a group the vocabulary does not name (x448, secp521r1,
+the ffdhe groups, a pure ML-KEM group). An assessment claims "only
+post-quantum" in the sense of the groups it expects, and a new group enters
+the vocabulary in a new version of this probe.

@@ -1,4 +1,4 @@
-describes: "Probe declarations without a publication policy: nothing says what may be published."
+describes: "Probe declarations without a publication policy: nothing says what may be published or who observes."
 base: valid_complete_v0_4
 remove: []
 expect:

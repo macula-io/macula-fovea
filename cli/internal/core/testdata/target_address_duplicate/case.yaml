@@ -1,0 +1,6 @@
+describes: "One address twice: two stations cannot answer at one address."
+base: valid_complete_v0_4
+remove: []
+expect:
+  errors:
+    - {rule: target_address_invalid, where: fovea.yaml}

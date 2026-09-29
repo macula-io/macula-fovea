@@ -198,6 +198,9 @@ func TestRenderV04ReadsAsV03AndNamesItsVersion(t *testing.T) {
 	if code := Render(dir, false, true, &html, &errb); code != 0 || !strings.Contains(html.String(), "<table>") {
 		t.Fatalf("render --html exit %d:\n%s", code, html.String())
 	}
+	if !strings.Contains(md.String(), "spec v0.4") || !strings.Contains(html.String(), "spec v0.4") || strings.Contains(md.String()+html.String(), "spec v0.3") {
+		t.Fatalf("the scorecard does not name spec v0.4:\n%s\n%s", md.String(), html.String())
+	}
 	r := renderJSON(t, dir)
 	if r.Version != "0.4" || len(r.GridV03) == 0 || len(r.Coverage) == 0 {
 		t.Fatalf("render --json on 0.4: version %q, grid %d, coverage %d", r.Version, len(r.GridV03), len(r.Coverage))

@@ -17,7 +17,7 @@ func renderV03HTML(w io.Writer, h *Header, cells map[string]*Cell, headerErrs []
 	r := rollV03(h, cells, headerErrs, time.Now())
 	m := computeMetrics(h, cells, lintErrs)
 
-	fmt.Fprintln(w, "<h3>fovea scorecard: "+html.EscapeString(h.System)+" (spec v0.3)</h3>")
+	fmt.Fprintln(w, "<h3>fovea scorecard: "+html.EscapeString(h.System)+" (spec v"+html.EscapeString(h.Fovea)+")</h3>")
 	gridHTML(w, h.AttributesVM(), r.GridV03)
 	fmt.Fprintln(w, "<p>🟢 assessed · 🟡 assumed/roadmap · 🔴 unassessed/missing · ⚪ justified N/A · <code>n/total</code> = authored cells</p>")
 	metricsHTML(w, m)

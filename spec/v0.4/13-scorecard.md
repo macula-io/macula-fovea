@@ -1,7 +1,8 @@
 # 13 — The scorecard (v0.3)
 
-> **v0.4 changes nothing in this section.** A v0.4 assessment is read
-> exactly as v0.3 describes, and its JSON names its own version. The
+> **v0.4 changes no scorecard rule.** A v0.4 assessment is read exactly as
+> v0.3 describes, and every format names its own version. The lint list at
+> the end gains v0.4's executable-evidence rule. The
 > proposed `pct_executable_evidence` metric waits for v0.5 (see
 > [proposals/v0.4-evidence](../proposals/v0.4-evidence/README.md)).
 
@@ -93,7 +94,9 @@ The following are lint-level failures, not conventions:
   `owner` attribution;
 - a `na` cell without `na_reason`;
 - a cell whose measures are *all* `org` when the status is `assessed` —
-  if the product does nothing here, the cell is `na`, not `assessed`.
+  if the product does nothing here, the cell is `na`, not `assessed`;
+- (v0.4) an `assessed` cell with no `test`, `scenario` or `probe` evidence on
+  any of its measures (12-cell-schema).
 
 The lint is the framework. Everything else in this directory is
 documentation *for* the lint.

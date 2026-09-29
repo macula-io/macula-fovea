@@ -1,4 +1,4 @@
-describes: "Two probe declarations claiming the same id: an observation fact could not say which it observed."
+describes: "Two probe declarations claiming the same id: an observation could not say which it observed."
 base: valid_complete_v0_4
 remove: []
 expect:

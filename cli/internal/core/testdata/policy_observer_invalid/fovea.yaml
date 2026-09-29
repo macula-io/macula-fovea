@@ -27,4 +27,4 @@ policy:
   cadence: PT1H
   suspended: []
   observers:
-    - "0033333333333333333333333333333333333333333333333333333333333333"
+    - "mcl-fovea"

@@ -1,0 +1,6 @@
+describes: "A station is named by its node id, 64 lowercase hex digits: the observer accepts a handshake only from that node."
+base: valid_complete_v0_4
+remove: []
+expect:
+  errors:
+    - {rule: target_node_id_invalid, where: fovea.yaml}

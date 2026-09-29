@@ -1,0 +1,6 @@
+describes: "The unspecified address names no station."
+base: valid_complete_v0_4
+remove: []
+expect:
+  errors:
+    - {rule: target_address_invalid, where: fovea.yaml}

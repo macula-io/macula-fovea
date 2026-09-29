@@ -45,10 +45,18 @@ type Header struct {
 	Policy  *Policy           `yaml:"policy"`
 }
 
-// Target is a named set of things a probe observes (v0.4).
+// Target is a named set of stations a probe observes (v0.4): each by the
+// address it answers at and the node id it must prove it is.
 type Target struct {
-	Kind      string   `yaml:"kind"`
-	Addresses []string `yaml:"addresses"`
+	Kind     string    `yaml:"kind"`
+	Stations []Station `yaml:"stations"`
+}
+
+// Station is one target member: an IP literal and port in canonical form,
+// and the node id (64 hex digits) a handshake there must be bound to.
+type Station struct {
+	Address string `yaml:"address"`
+	NodeID  string `yaml:"node_id"`
 }
 
 // Policy is the header's publication policy (v0.4): what an observer
@@ -57,6 +65,9 @@ type Policy struct {
 	Publish   string   `yaml:"publish"`
 	Cadence   string   `yaml:"cadence"`
 	Suspended []string `yaml:"suspended"`
+	// Observers are the node ids whose observations a reader of this
+	// assessment trusts (spec 15, verification step 5).
+	Observers []string `yaml:"observers"`
 }
 
 // ---- cell ----

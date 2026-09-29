@@ -99,8 +99,9 @@ cell's authored status.
 - `target`: a target the header declares (14-instantiation), of the kind the
   probe observes.
 - `expect`: what the probe must see, in its own vocabulary (16-probes). A
-  group expected both ways, or a group the probe does not know, is a lint
-  error, and so is an empty expectation.
+  group expected both ways, a group the probe does not know, an empty
+  expectation, and `refused` groups with no `accepted` group beside them are
+  lint errors (a refusal is evidence only beside an acceptance, 16-probes).
 
 A probe declares a claim about a `by_design` measure in practice, but the
 lint does not require it: the claim's evidence is its observations.

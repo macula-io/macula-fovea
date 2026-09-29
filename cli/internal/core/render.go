@@ -205,7 +205,7 @@ func renderV03(w io.Writer, h *Header, cells map[string]*Cell, headerErrs []Find
 		return
 	}
 
-	fmt.Fprintf(w, "# Scorecard: %s (spec v0.3)\n\n", h.System)
+	fmt.Fprintf(w, "# Scorecard: %s (spec v%s)\n\n", h.System, h.Fovea)
 	fmt.Fprintln(w, "| attribute     | actors | lifecycle | data | environment |")
 	fmt.Fprintln(w, "|---|---|---|---|---|")
 	for _, a := range attrs {

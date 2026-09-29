@@ -41,13 +41,17 @@ observe and **what** an observer may publish.
 targets:
   fleet_stations:                  # a name probes refer to
     kind: macula_station           # the only target kind v0.4 defines
-    addresses:                     # IP literal and port; never a name
-      - "192.0.2.10:4433"
-      - "[2001:db8::10]:4433"
+    stations:                      # each: where it answers, and who it must be
+      - address: "192.0.2.10:4433"
+        node_id: "0011111111111111111111111111111111111111111111111111111111111111"
+      - address: "[2001:db8::10]:4433"
+        node_id: "0022222222222222222222222222222222222222222222222222222222222222"
 policy:
   publish: state_changes           # every_result | state_changes
-  cadence: PT1H                    # ISO 8601 duration, at least a minute
+  cadence: PT1H                    # ISO 8601 duration, a minute to seven days
   suspended: []                    # claim ids an observer must not observe
+  observers:                       # node ids whose observations count
+    - "0033333333333333333333333333333333333333333333333333333333333333"
 ```
 
 - **Addresses are IP literals, in one canonical form.** An observation that
@@ -57,18 +61,33 @@ policy:
   decimal (an IPv4-mapped IPv6 address is written as IPv4), or IPv6 in
   brackets, compressed per RFC 5952 in lowercase with no zone id; then `:` and
   the port in decimal without leading zeros. `[2001:db8::10]:4433`, never
-  `[2001:DB8:0:0::10]:04433`.
+  `[2001:DB8:0:0::10]:04433`. An address appears once in the whole header,
+  and is neither the unspecified address nor a multicast one.
+- **Each station is named by its node id** (64 lowercase hex digits). An
+  observer counts a handshake as the station's only when the station proves
+  that identity (16-probes); another node answering at the address makes the
+  attempt `inconclusive`. A station's node id is stable across restarts and
+  address changes, and a changed address is a new assessment revision.
 - **`publish`**: `every_result` publishes every observation; `state_changes`
-  only an observation whose state differs from the claim's previous one. An
-  observer signs and keeps every observation either way.
-- **`cadence`**: how often a claim is observed. Days, hours, minutes and
-  seconds only (`P1D`, `PT1H`, `PT15M`), since a month has no fixed length.
+  publishes an observation whose state differs from the station's previous one
+  for the claim, and republishes the latest observation before its record
+  expires, so a reader always finds a live one. An observer signs and keeps
+  every observation either way.
+- **`cadence`**: how often a claim is observed, from a minute to seven days.
+  Days, hours, minutes and seconds only (`P1D`, `PT1H`, `PT15M`), since a
+  month has no fixed length; seven days is the most an observation's record
+  lives (15-observations).
 - **`suspended`**: claims the observer must not observe until a later
   revision removes them, for example while a target is being rebuilt. Each
   must be a claim the assessment declares.
+- **`observers`**: the node ids of the observers whose observations of this
+  assessment a reader trusts. Every admitted member of a realm can sign a
+  record of the observation type; this list is what tells a verifier which
+  ones speak for this assessment (15-observations).
 
-A header with probe declarations and no `policy` is a lint error: nothing
-would say what may be published.
+A header with probe declarations and no `policy`, or a policy naming no
+observer, is a lint error: nothing would say what may be published or whose
+observations count.
 
 ## Step 4 — Cells
 

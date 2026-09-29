@@ -1,4 +1,4 @@
-describes: "A complete, lint-clean v0.4 assessment: targets, a publication policy, and an assessed cell whose countermeasure carries a probe declaration. The base every v0.4 case overlays."
+describes: "A complete, lint-clean v0.4 assessment: targets naming stations by address and node id, a publication policy naming its observer, and an assessed cell whose countermeasure carries a probe declaration. The base every v0.4 case overlays."
 base: valid_complete
 remove: []
 expect:

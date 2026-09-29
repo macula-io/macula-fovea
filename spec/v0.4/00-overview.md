@@ -57,7 +57,7 @@ states. They are observed, never authored: no cell carries one.
 | State | Meaning |
 |---|---|
 | `holding` | Every expectation of the probe was observed as expected, in one round. |
-| `broken` | An authenticated observation contradicts the claim. |
+| `broken` | An attempt the declared station itself authenticated contradicts the claim (16-probes: only an acceptance can break a claim). |
 | `unknown` | Neither: nothing answered, the probe could not conclude, or what it saw cannot be relied on. A probe that cannot reach its target yields `unknown`, never `holding`. |
 
 ## Artifact set

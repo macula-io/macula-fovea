@@ -1,4 +1,4 @@
-describes: "A claim id is a lowercase identifier: observation records carry it."
+describes: "Suspending a claim whose id is invalid is one fault, reported once, at the claim."
 base: valid_complete_v0_4
 remove: []
 expect:

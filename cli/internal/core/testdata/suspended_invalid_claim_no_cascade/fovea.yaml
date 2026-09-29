@@ -25,6 +25,6 @@ targets:
 policy:
   publish: state_changes
   cadence: PT1H
-  suspended: []
+  suspended: [KX-Only]
   observers:
     - "0033333333333333333333333333333333333333333333333333333333333333"

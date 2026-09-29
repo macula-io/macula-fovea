@@ -9,6 +9,12 @@ threat:
   manifestations:
     - (min 1, non-empty; anti-theater)
 defense:
+  # Each measure: {measure, status: by_design|roadmap|org, source, notes}.
+  # From spec v0.4 a measure may carry evidence, and an `assessed` cell needs
+  # test, scenario or probe evidence on at least one measure (spec 12):
+  #   evidence:
+  #     - {kind: test, ref: path/to/test}
+  #     - {kind: doc, ref: README.md#section}
   detection: []
   countermeasures: []
   recovery: []

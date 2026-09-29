@@ -26,5 +26,3 @@ policy:
   publish: state_changes
   cadence: PT1H
   suspended: []
-  observers:
-    - "0033333333333333333333333333333333333333333333333333333333333333"

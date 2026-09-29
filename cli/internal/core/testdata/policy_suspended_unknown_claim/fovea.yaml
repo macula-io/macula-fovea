@@ -17,10 +17,14 @@ cells_dir: cells/
 targets:
   fleet_stations:
     kind: macula_station
-    addresses:
-      - "192.0.2.10:4433"
-      - "[2001:db8::10]:4433"
+    stations:
+      - address: "192.0.2.10:4433"
+        node_id: "0011111111111111111111111111111111111111111111111111111111111111"
+      - address: "[2001:db8::10]:4433"
+        node_id: "0022222222222222222222222222222222222222222222222222222222222222"
 policy:
   publish: state_changes
   cadence: PT1H
   suspended: [kx_nothing]
+  observers:
+    - "0033333333333333333333333333333333333333333333333333333333333333"

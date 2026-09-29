@@ -66,6 +66,8 @@ var (
 	ruleAssessedWithoutExecutableEvidence = newRule("assessed_without_executable_evidence")
 	ruleTargetKindUnknown                 = newRule("target_kind_unknown")
 	ruleTargetAddressInvalid              = newRule("target_address_invalid")
+	ruleTargetNodeIDInvalid               = newRule("target_node_id_invalid")
+	rulePolicyObserverInvalid             = newRule("policy_observer_invalid")
 	rulePolicyMissing                     = newRule("policy_missing")
 	rulePolicyPublishUnknown              = newRule("policy_publish_unknown")
 	rulePolicyCadenceInvalid              = newRule("policy_cadence_invalid")

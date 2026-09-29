@@ -43,9 +43,17 @@ var publishModes = map[string]bool{"every_result": true, "state_changes": true}
 
 var claimID = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
 
+// nodeID is a node id as a header writes it: 32 bytes, lowercase hex.
+var nodeID = regexp.MustCompile(`^[0-9a-f]{64}$`)
+
+// maxCadenceSeconds: an observation's record lives at most 7 days (macula's
+// domain record maximum), so a claim observed less often could have no live
+// record between observations.
+const maxCadenceSeconds = 7 * 86400
+
 // isoDuration is the subset of ISO 8601 durations spec 14 allows for a
 // cadence: days, hours, minutes, seconds; no years, months or weeks, whose
-// length depends on the calendar.
+// length depends on the calendar. A T must be followed by a time.
 var isoDuration = regexp.MustCompile(`^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$`)
 
 // lintV04 runs the v0.4 rules on a v0.4 assessment, and on an older one
@@ -57,7 +65,9 @@ func lintV04(h *Header, cells map[string]*Cell) []Finding {
 	var f []Finding
 	f = append(f, lintTargets(h)...)
 	f = append(f, lintPolicy(h)...)
-	claims := map[string][]string{} // claim id -> cell ids, one per declaration
+	claims := map[string][]string{} // valid claim id -> cell ids, one per declaration
+	declared := map[string]bool{}   // every claim a probe declares, valid or not
+	probes := 0
 	for _, id := range sortedIDs(cells) {
 		c := cells[id]
 		executable := false
@@ -65,7 +75,12 @@ func lintV04(h *Header, cells map[string]*Cell) []Finding {
 			for _, e := range m.Evidence {
 				f = append(f, lintEvidence(h, id, e)...)
 				executable = executable || executableEvidence[e.Kind]
-				if e.Kind == "probe" && claimID.MatchString(e.Claim) {
+				if e.Kind != "probe" {
+					continue
+				}
+				probes++
+				declared[e.Claim] = true
+				if claimID.MatchString(e.Claim) {
 					claims[e.Claim] = append(claims[e.Claim], id)
 				}
 			}
@@ -81,13 +96,23 @@ func lintV04(h *Header, cells map[string]*Cell) []Finding {
 			}
 		}
 	}
-	if h.Policy == nil && len(claims) > 0 {
-		f = append(f, errf(rulePolicyMissing, "fovea.yaml", "probe declarations need a policy saying what an observer may publish"))
+	if h.Policy == nil && probes > 0 {
+		f = append(f, errf(rulePolicyMissing, "fovea.yaml", "probe declarations need a policy saying what an observer may publish and who observes"))
 	}
 	if h.Policy != nil {
+		// A suspended claim that a probe declares, even under an invalid id,
+		// is reported once, at the declaration (claim_id_invalid).
 		for _, s := range h.Policy.Suspended {
-			if _, ok := claims[s]; !ok {
+			if !declared[s] {
 				f = append(f, errf(rulePolicySuspendedUnknownClaim, "fovea.yaml", "policy.suspended names %q, which no probe declaration claims", s))
+			}
+		}
+		if probes > 0 && len(h.Policy.Observers) == 0 {
+			f = append(f, errf(rulePolicyObserverInvalid, "fovea.yaml", "policy.observers names no observer: a verifier could not tell this assessment's observations from any realm member's"))
+		}
+		for _, o := range h.Policy.Observers {
+			if !nodeID.MatchString(o) {
+				f = append(f, errf(rulePolicyObserverInvalid, "fovea.yaml", "policy.observers entry %q is not a node id (64 lowercase hex digits)", o))
 			}
 		}
 	}
@@ -183,17 +208,26 @@ func lintTargets(h *Header) []Finding {
 		names = append(names, n)
 	}
 	sort.Strings(names)
+	seen := map[string]string{} // address -> the target that declared it first
 	for _, n := range names {
 		t := h.Targets[n]
 		if !targetKinds[t.Kind] {
 			f = append(f, errf(ruleTargetKindUnknown, "fovea.yaml", "targets.%s.kind %q is not a spec target kind (macula_station)", n, t.Kind))
 		}
-		if len(t.Addresses) == 0 {
-			f = append(f, errf(ruleTargetAddressInvalid, "fovea.yaml", "targets.%s has no addresses", n))
+		if len(t.Stations) == 0 {
+			f = append(f, errf(ruleTargetAddressInvalid, "fovea.yaml", "targets.%s names no station", n))
 		}
-		for _, a := range t.Addresses {
-			if !ipLiteralWithPort(a) {
-				f = append(f, errf(ruleTargetAddressInvalid, "fovea.yaml", "targets.%s address %q is not an IP literal and port in canonical form (e.g. 192.0.2.10:4433, [2001:db8::10]:4433)", n, a))
+		for _, st := range t.Stations {
+			switch prev, dup := seen[st.Address]; {
+			case !ipLiteralWithPort(st.Address):
+				f = append(f, errf(ruleTargetAddressInvalid, "fovea.yaml", "targets.%s address %q is not a unicast IP literal and port in canonical form (e.g. 192.0.2.10:4433, [2001:db8::10]:4433)", n, st.Address))
+			case dup:
+				f = append(f, errf(ruleTargetAddressInvalid, "fovea.yaml", "targets.%s address %q is already declared in targets.%s: one address, one station", n, st.Address, prev))
+			default:
+				seen[st.Address] = n
+			}
+			if !nodeID.MatchString(st.NodeID) {
+				f = append(f, errf(ruleTargetNodeIDInvalid, "fovea.yaml", "targets.%s station %q node_id %q is not a node id (64 lowercase hex digits)", n, st.Address, st.NodeID))
 			}
 		}
 	}
@@ -212,7 +246,7 @@ func ipLiteralWithPort(a string) bool {
 	}
 	ip := net.ParseIP(host)
 	p, err := strconv.Atoi(port)
-	if ip == nil || err != nil || p <= 0 || p > 65535 {
+	if ip == nil || err != nil || p <= 0 || p > 65535 || ip.IsUnspecified() || ip.IsMulticast() {
 		return false
 	}
 	return a == canonicalAddress(ip, p)
@@ -236,16 +270,18 @@ func lintPolicy(h *Header) []Finding {
 	if !publishModes[h.Policy.Publish] {
 		f = append(f, errf(rulePolicyPublishUnknown, "fovea.yaml", "policy.publish %q is not every_result or state_changes", h.Policy.Publish))
 	}
-	if s, ok := cadenceSeconds(h.Policy.Cadence); !ok || s < 60 {
-		f = append(f, errf(rulePolicyCadenceInvalid, "fovea.yaml", "policy.cadence %q is not an ISO 8601 duration of at least a minute (e.g. PT1H)", h.Policy.Cadence))
+	if s, ok := cadenceSeconds(h.Policy.Cadence); !ok || s < 60 || s > maxCadenceSeconds {
+		f = append(f, errf(rulePolicyCadenceInvalid, "fovea.yaml", "policy.cadence %q is not an ISO 8601 duration from a minute to seven days (e.g. PT1H)", h.Policy.Cadence))
 	}
 	return f
 }
 
-// cadenceSeconds parses the ISO 8601 subset isoDuration allows.
+// cadenceSeconds parses the ISO 8601 subset isoDuration allows. A component
+// larger than the longest cadence is refused before it is multiplied, so no
+// value can overflow.
 func cadenceSeconds(d string) (int64, bool) {
 	m := isoDuration.FindStringSubmatch(d)
-	if m == nil || d == "P" || d == "PT" {
+	if m == nil || d == "P" || strings.HasSuffix(d, "T") {
 		return 0, false
 	}
 	var total int64
@@ -254,7 +290,7 @@ func cadenceSeconds(d string) (int64, bool) {
 			continue
 		}
 		n, err := strconv.ParseInt(m[i+1], 10, 64)
-		if err != nil {
+		if err != nil || n > maxCadenceSeconds {
 			return 0, false
 		}
 		total += n * unit

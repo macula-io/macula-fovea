@@ -1,0 +1,6 @@
+describes: "Probe declarations with no observer named: a verifier could not tell this assessment's observations from any realm member's."
+base: valid_complete_v0_4
+remove: []
+expect:
+  errors:
+    - {rule: policy_observer_invalid, where: fovea.yaml}
