@@ -1,0 +1,6 @@
+describes: "Publication is every_result or state_changes."
+base: valid_complete_v0_4
+remove: []
+expect:
+  errors:
+    - {rule: policy_publish_unknown, where: fovea.yaml}

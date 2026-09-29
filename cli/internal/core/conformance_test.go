@@ -14,8 +14,9 @@ import (
 )
 
 // A case under testdata/<name>/ is an assessment directory described by
-// case.yaml. When base is set, the case is the base case's files overlaid
-// with the case's own files, minus the paths listed in remove.
+// case.yaml. When base is set, the case is the base case, itself materialized
+// (so a base may have a base), overlaid with the case's own files, minus the
+// paths listed in remove.
 // expect.errors is the exact multiset of (rule, where) pairs lint must raise
 // as errors: no more, no fewer, each as often as listed. where is
 // "fovea.yaml" for header findings, the cell file name for a file that
@@ -53,10 +54,22 @@ func readCase(t *testing.T, name string) caseSpec {
 // so tests that write (init) never touch the committed fixtures.
 func materialize(t *testing.T, name string) string {
 	t.Helper()
-	spec := readCase(t, name)
 	dst := t.TempDir()
+	overlay(t, name, dst, map[string]bool{})
+	return dst
+}
+
+// overlay writes case name into dst: its base first (recursively), then its
+// own files, then its removals. seen refuses a base cycle.
+func overlay(t *testing.T, name, dst string, seen map[string]bool) {
+	t.Helper()
+	if seen[name] {
+		t.Fatalf("case %s: base cycle", name)
+	}
+	seen[name] = true
+	spec := readCase(t, name)
 	if spec.Base != "" {
-		copyTree(t, filepath.Join("testdata", spec.Base), dst)
+		overlay(t, spec.Base, dst, seen)
 	}
 	copyTree(t, filepath.Join("testdata", name), dst)
 	for _, p := range spec.Remove {
@@ -64,7 +77,6 @@ func materialize(t *testing.T, name string) string {
 			t.Fatalf("case %s: remove %s: %v", name, p, err)
 		}
 	}
-	return dst
 }
 
 func copyTree(t *testing.T, src, dst string) {

@@ -1,9 +1,12 @@
 # Proposal — v0.4: executable evidence (the Cucumber link)
 
-**Status: PROPOSED. Not normative.** Nothing in this directory is enforced by
-the current CLI; no header may declare `fovea: "0.4"` yet. It exists so the
-evidence model can be argued, amended, and — after at least one dogfood
-demonstrates it — promoted into `spec/v0.4/` proper.
+**Status: PARTLY PROMOTED (2026-09-29).** Changes 1 and 2 below are now
+normative in [`spec/v0.4/`](../../v0.4/00-overview.md) (12-cell-schema), with a
+fourth evidence kind, `probe`, and the observation model of 15 and 16. Changes
+3 and 4, and the open questions, remain proposed for **v0.5**: nothing consumes
+a Cucumber report yet, and the questions below are still open. Change 3's
+command is renamed `fovea check-evidence`, because `fovea verify` now names the
+offline check of a signed observation (spec 15).
 
 ## The problem this solves
 
@@ -48,12 +51,12 @@ is the only thing allowed to call a cell `assessed`.**
    evidence kind (`test` or `scenario`) whose CI run passed. A cell with only
    `doc` evidence is `assumed`, whatever its author believes.
 
-3. **`fovea verify <dir> --report cucumber.json`** — consumes the standard
+3. **`fovea check-evidence <dir> --report cucumber.json`** (v0.5) — consumes the standard
    Cucumber JSON report, cross-references every `scenario` evidence ref, and
    fails the build if a scenario named by an `assessed` cell is missing or
    failed. A failed scenario is a lint error, not a scorecard shade.
 
-4. **New headline metric:** `pct_executable_evidence` — measures with
+4. **New headline metric (v0.5):** `pct_executable_evidence` — measures with
    test/scenario evidence ÷ all `by_design` measures. Amber-to-green progress
    becomes measurable per assessment.
 

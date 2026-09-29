@@ -186,3 +186,20 @@ func TestRenderHTMLCarriesTheLintErrorCount(t *testing.T) {
 		t.Fatalf("html metrics do not show the one lint error:\n%s", out.String())
 	}
 }
+
+// A v0.4 assessment reads through the v0.3 scorecard (v0.4 adds no scorecard
+// rule) and says which version it is, in every output.
+func TestRenderV04ReadsAsV03AndNamesItsVersion(t *testing.T) {
+	dir := materialize(t, "valid_complete_v0_4")
+	var md, html, errb bytes.Buffer
+	if code := Render(dir, false, false, &md, &errb); code != 0 {
+		t.Fatalf("render exit %d: %s", code, errb.String())
+	}
+	if code := Render(dir, false, true, &html, &errb); code != 0 || !strings.Contains(html.String(), "<table>") {
+		t.Fatalf("render --html exit %d:\n%s", code, html.String())
+	}
+	r := renderJSON(t, dir)
+	if r.Version != "0.4" || len(r.GridV03) == 0 || len(r.Coverage) == 0 {
+		t.Fatalf("render --json on 0.4: version %q, grid %d, coverage %d", r.Version, len(r.GridV03), len(r.Coverage))
+	}
+}

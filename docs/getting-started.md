@@ -1,7 +1,7 @@
 # Getting started — zero to a lint-clean grid
 
 Ten minutes, one service. This walks the exact command sequence; the
-normative rules it obeys live in [`spec/v0.3/`](../spec/v0.3/00-overview.md).
+normative rules it obeys live in [`spec/v0.4/`](../spec/v0.4/00-overview.md).
 
 ## 0. Build the CLI
 
@@ -24,7 +24,7 @@ security/fovea/
 Minimal `fovea.yaml`:
 
 ```yaml
-fovea: "0.3"
+fovea: "0.4"
 system: my-service
 assessment_date: 2026-09-25
 owner: you@example.org          # lint fails on "unassigned"
@@ -45,7 +45,8 @@ cells_dir: cells/
 Write `trust-anchors.md` (the keys, CAs, pipelines whose compromise breaks
 everything) and `landscape.md` (a diagram; every column must name something
 on it and everything on it must be under some column) — see
-[spec 14](../spec/v0.3/14-instantiation.md).
+[spec 14](../spec/v0.4/14-instantiation.md). A header needs `targets` and a
+`policy` only once a cell declares a probe (spec 14, 16).
 
 ## 2. Generate the grid
 
@@ -64,7 +65,9 @@ broken.
 One file per `column.attribute`. Fill the *cold* families first
 (`decommission`, `socio_legal`, `temporal`) — that's where the questions
 you wouldn't have asked live. Every `by_design` measure needs a `source`;
-every `roadmap` cell needs `review_by`; every `na` needs `na_reason`.
+every `roadmap` cell needs `review_by`; every `na` needs `na_reason`; every
+`assessed` cell needs `test`, `scenario` or `probe` evidence on one of its
+measures (a citation alone leaves it `assumed`).
 Template: [`templates/cell.yaml`](../templates/cell.yaml).
 
 ## 4. Lint until clean

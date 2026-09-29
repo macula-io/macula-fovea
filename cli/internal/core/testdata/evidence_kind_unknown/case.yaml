@@ -1,0 +1,6 @@
+describes: "An evidence kind outside doc, test, scenario and probe."
+base: valid_complete_v0_4
+remove: []
+expect:
+  errors:
+    - {rule: evidence_kind_unknown, where: in_motion.confidentiality}

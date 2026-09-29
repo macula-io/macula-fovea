@@ -68,7 +68,7 @@ over `GITHUB_TOKEN` (stdlib only, no new deps), marker idempotency,
 
 ## Synergy with v0.4 evidence
 
-A scenario whose evidence fails in `fovea verify` auto-opens an issue
+A scenario whose evidence fails in `fovea check-evidence` (proposed for v0.5) auto-opens an issue
 referencing both the cell and the failing feature file. Evidence in, work
 out — one loop, closed.
 

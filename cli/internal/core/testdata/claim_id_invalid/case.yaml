@@ -1,0 +1,6 @@
+describes: "A claim id is a lowercase identifier: observation facts carry it."
+base: valid_complete_v0_4
+remove: []
+expect:
+  errors:
+    - {rule: claim_id_invalid, where: in_motion.confidentiality}

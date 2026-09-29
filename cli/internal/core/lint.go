@@ -61,6 +61,7 @@ func Check(dir string) (*Header, map[string]*Cell, []Finding, error) {
 	f = append(f, lintCoverage(h, cells)...)
 	f = append(f, lintEachCell(h, cells)...)
 	f = append(f, lintDuplicates(cells)...)
+	f = append(f, lintV04(h, cells)...)
 	return h, cells, f, nil
 }
 

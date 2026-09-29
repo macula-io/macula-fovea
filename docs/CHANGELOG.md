@@ -7,6 +7,27 @@ Two version lines live in this repository and are kept apart:
 - **Spec** versions (`spec/vX.Y/`): declared by an assessment header as
   `fovea: "X.Y"`. A tool release says which spec versions it reads.
 
+## Unreleased: spec 0.4 (2026-09-29), read by `main`
+
+Spec v0.4 lets a claim be re-checked, not only written.
+
+- **Evidence on measures:** `doc`, `test`, `scenario` or `probe`.
+- **`assessed` needs executable evidence:** a `test`, `scenario` or `probe`
+  on one of the cell's measures (`assessed_without_executable_evidence`).
+- **Targets and a publication policy** in the header: what probes observe,
+  by IP address in one canonical form, and what an observer publishes.
+- **Observations** (spec 15): each is a macula record of domain type
+  0x23, signed by the observer's node identity key and bound to the realm
+  by its realm member endorsement, verifiable offline. The contract
+  section is marked as the one `fovea verify` depends on.
+- **The probe registry** (spec 16): `kx_group` v1, one group per attempt,
+  and how a round is judged `holding`, `broken` or `unknown`.
+- 16 new lint rules, each with its case; v0.2 and v0.3 assessments refuse
+  the new fields (`field_needs_v0_4`) rather than ignore them.
+- The Cucumber report cross-check and `pct_executable_evidence` wait for
+  v0.5; the check, if it lands, is `fovea check-evidence`, since `fovea
+  verify` checks signed observations.
+
 ## Tool 0.1.0 (2026-09-26), reads spec 0.2 and 0.3
 
 The first tool release. The lint now enforces the spec it implements, and

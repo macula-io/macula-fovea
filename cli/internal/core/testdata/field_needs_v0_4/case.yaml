@@ -1,0 +1,6 @@
+describes: "Evidence in a v0.3 assessment: the field would be read by nothing, so it is refused rather than ignored."
+base: valid_complete
+remove: []
+expect:
+  errors:
+    - {rule: field_needs_v0_4, where: in_motion.confidentiality}

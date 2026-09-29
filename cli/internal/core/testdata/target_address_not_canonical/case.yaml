@@ -1,0 +1,6 @@
+describes: "An IPv6 address in uppercase and uncompressed: observations carry the address in its one canonical form (RFC 5952), so the header writes it that way."
+base: valid_complete_v0_4
+remove: []
+expect:
+  errors:
+    - {rule: target_address_invalid, where: fovea.yaml}

@@ -1,6 +1,6 @@
 # Reference — statuses, rules, flags, pitfalls
 
-Everything the lint enforces, in one place. Normative: spec/v0.3.
+Everything the lint enforces, in one place. Normative: spec/v0.4.
 
 ## Cell statuses
 
@@ -8,7 +8,7 @@ Everything the lint enforces, in one place. Normative: spec/v0.3.
 |---|---|---|
 | `unassessed` | Nobody has answered the cell yet | always fails: answer it or declare `na` |
 | `assumed` | Answer drafted from docs/design, not verified | definition, manifestations, measures, detection (or an argued `na_reason`); renders amber |
-| `assessed` | Verified by inspection of code, config, or test | as `assumed`, and not all-`org` measures |
+| `assessed` | Verified, and re-checkable | as `assumed`, not all-`org` measures, and (v0.4) at least one `test`, `scenario` or `probe` evidence on a measure |
 | `roadmap` | Gap accepted as real, defense scheduled | as `assumed`, plus `review_by` (ISO date) |
 | `na` | Not applicable | `na_reason` (written, not blank) |
 
@@ -38,7 +38,7 @@ format is described in `cli/README.md`).
 
 | Rule code | Fails when |
 |---|---|
-| `header_version_unknown` | `fovea:` is not a spec version the CLI knows (0.2, 0.3) |
+| `header_version_unknown` | `fovea:` is not a spec version the CLI knows (0.2, 0.3, 0.4) |
 | `header_owner_unassigned` | header `owner` is empty or `unassigned` (any case, any spacing) |
 | `grid_missing_column` | a spec column is absent from the header |
 | `grid_column_wrong_family` | a spec column is declared under another family |
@@ -71,6 +71,27 @@ format is described in `cli/README.md`).
 | `by_design_without_source` | a `by_design` measure has no `source` |
 | `assessed_all_org` | an `assessed` cell whose measures are all `org` |
 | `definition_copy_paste` | two threat definitions are >=85% similar (word-set Jaccard); reported on both cells of the pair |
+
+v0.4 rules (evidence, probe declarations, targets, policy; spec 12, 14, 16):
+
+| Rule code | Fails when |
+|---|---|
+| `field_needs_v0_4` | a v0.2 or v0.3 assessment uses `evidence`, `targets` or `policy` (refused, not ignored) |
+| `evidence_kind_unknown` | an evidence `kind` is not `doc`, `test`, `scenario` or `probe` |
+| `evidence_ref_empty` | `doc`, `test` or `scenario` evidence has no `ref` |
+| `evidence_runner_unknown` | `scenario` evidence names a runner other than `godog`, `whitebread` or `cucumber` |
+| `assessed_without_executable_evidence` | an `assessed` cell has no `test`, `scenario` or `probe` evidence on any measure |
+| `probe_unknown` | a probe and version the spec's registry (16-probes) does not define |
+| `probe_target_undeclared` | a probe names a target the header does not declare, or one of another kind |
+| `probe_expectation_invalid` | an expectation names nothing, a group outside the probe's vocabulary, a group both ways, or refusals with no accepted group beside them |
+| `claim_id_invalid` | a probe's `claim` is not `[a-z][a-z0-9_]*` |
+| `claim_id_duplicate` | two probe declarations claim the same id; reported at each |
+| `target_kind_unknown` | a target's `kind` is not `macula_station` |
+| `target_address_invalid` | a target has no addresses, or one that is not an IP literal and port in canonical form (`192.0.2.10:4433`, `[2001:db8::10]:4433`) |
+| `policy_missing` | the assessment declares probes but no `policy` |
+| `policy_publish_unknown` | `policy.publish` is not `every_result` or `state_changes` |
+| `policy_cadence_invalid` | `policy.cadence` is not an ISO 8601 duration (days to seconds) of at least a minute |
+| `policy_suspended_unknown_claim` | `policy.suspended` names a claim no probe declares |
 
 An overdue `review_by` is not a lint error; the scorecard reports it
 (`overdue_roadmap`, `oldest_review_by`, and the v0.3 open gaps).

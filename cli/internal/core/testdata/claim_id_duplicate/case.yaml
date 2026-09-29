@@ -1,0 +1,7 @@
+describes: "Two probe declarations claiming the same id: an observation fact could not say which it observed."
+base: valid_complete_v0_4
+remove: []
+expect:
+  errors:
+    - {rule: claim_id_duplicate, where: in_motion.confidentiality}
+    - {rule: claim_id_duplicate, where: in_motion.integrity}

@@ -1,0 +1,6 @@
+describes: "Target addresses are IP literals with a port; a name would make the observation depend on DNS."
+base: valid_complete_v0_4
+remove: []
+expect:
+  errors:
+    - {rule: target_address_invalid, where: fovea.yaml}

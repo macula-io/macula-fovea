@@ -1,0 +1,6 @@
+describes: "A target kind the spec does not define."
+base: valid_complete_v0_4
+remove: []
+expect:
+  errors:
+    - {rule: target_kind_unknown, where: fovea.yaml}

@@ -1,6 +1,6 @@
 name: "macula-fovea"
 description: >-
-  Run the fovea security-assessment CLI (spec v0.2/v0.3) against an assessment
+  Run the fovea security-assessment CLI (spec v0.2/v0.3/v0.4) against an assessment
   directory. Lint failures annotate the offending cell files in the PR diff;
   score and scorecard are written as artifacts and a job summary.
 branding:

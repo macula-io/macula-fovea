@@ -1,6 +1,8 @@
 // Package core implements fovea's model, lint rules, scorecard and grid init
-// for spec v0.2 and v0.3 (identical grid and cell rules; v0.3 changes only
-// the scorecard). Spec-normative rules are cited where enforced.
+// for spec v0.2, v0.3 and v0.4 (identical grid and cell rules; v0.3 changes
+// only the scorecard, v0.4 adds evidence, probe declarations, targets and a
+// publication policy, lint_v04.go). Spec-normative rules are cited where
+// enforced.
 package core
 
 import (
@@ -37,15 +39,51 @@ type Header struct {
 	Landscape      string              `yaml:"landscape"`
 	CellsDir       string              `yaml:"cells_dir"`
 	Team           []string            `yaml:"team"`
+	// v0.4 (spec 14-instantiation, 16-probes): what probes observe, and what
+	// an observer may publish about them.
+	Targets map[string]Target `yaml:"targets"`
+	Policy  *Policy           `yaml:"policy"`
+}
+
+// Target is a named set of things a probe observes (v0.4).
+type Target struct {
+	Kind      string   `yaml:"kind"`
+	Addresses []string `yaml:"addresses"`
+}
+
+// Policy is the header's publication policy (v0.4): what an observer
+// publishes, how often it observes, and which claims it does not observe.
+type Policy struct {
+	Publish   string   `yaml:"publish"`
+	Cadence   string   `yaml:"cadence"`
+	Suspended []string `yaml:"suspended"`
 }
 
 // ---- cell ----
 
 type Measure struct {
-	Measure string `yaml:"measure"`
-	Status  string `yaml:"status"` // by_design | roadmap | org
-	Source  string `yaml:"source"`
-	Notes   string `yaml:"notes"`
+	Measure  string     `yaml:"measure"`
+	Status   string     `yaml:"status"` // by_design | roadmap | org
+	Source   string     `yaml:"source"`
+	Notes    string     `yaml:"notes"`
+	Evidence []Evidence `yaml:"evidence"` // v0.4
+}
+
+// Evidence is one piece of evidence on a measure (v0.4, spec 12-cell-schema):
+// doc, test and scenario name where it is; a probe declares a claim an
+// observer checks on the running system (spec 16-probes).
+type Evidence struct {
+	Kind    string `yaml:"kind"`   // doc | test | scenario | probe
+	Ref     string `yaml:"ref"`    // doc, test, scenario
+	Runner  string `yaml:"runner"` // scenario: godog | whitebread | cucumber
+	Claim   string `yaml:"claim"`  // probe: the stable claim id observations carry
+	Probe   string `yaml:"probe"`
+	Version int    `yaml:"version"`
+	Target  string `yaml:"target"`
+	Expect  struct {
+		Accepted []string `yaml:"accepted"`
+		Refused  []string `yaml:"refused"`
+	} `yaml:"expect"`
 }
 
 type Threat struct {
@@ -75,7 +113,7 @@ var families = []string{"actors", "lifecycle", "data", "environment"}
 // knownVersions: spec versions this CLI can render and lint. Assessments
 // declare their version in the header; older headers keep their exact
 // reading (spec/README: versions are forked, not branched).
-var knownVersions = map[string]bool{"0.2": true, "0.3": true}
+var knownVersions = map[string]bool{"0.2": true, "0.3": true, "0.4": true}
 
 // SpecVersions lists the spec versions this build reads, ascending.
 func SpecVersions() []string {
@@ -159,7 +197,7 @@ func LoadHeader(dir string) (*Header, []Finding, error) {
 	}
 	var f []Finding
 	if h.Fovea == "" || !knownVersions[h.Fovea] {
-		f = append(f, errf(ruleHeaderVersionUnknown, "fovea.yaml", "fovea must be a known spec version (0.2, 0.3), got %q", h.Fovea))
+		f = append(f, errf(ruleHeaderVersionUnknown, "fovea.yaml", "fovea must be a known spec version (0.2, 0.3, 0.4), got %q", h.Fovea))
 	}
 	if unassigned(h.Owner) {
 		f = append(f, errf(ruleHeaderOwnerUnassigned, "fovea.yaml", "owner is unassigned"))

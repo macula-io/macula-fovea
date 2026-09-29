@@ -1,0 +1,6 @@
+describes: "A suspended claim must be a claim the assessment declares."
+base: valid_complete_v0_4
+remove: []
+expect:
+  errors:
+    - {rule: policy_suspended_unknown_claim, where: fovea.yaml}

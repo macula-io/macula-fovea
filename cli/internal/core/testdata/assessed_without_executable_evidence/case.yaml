@@ -1,0 +1,6 @@
+describes: "An assessed cell whose measures carry no test, scenario or probe evidence: assessed is a claim nothing re-checks."
+base: valid_complete_v0_4
+remove: []
+expect:
+  errors:
+    - {rule: assessed_without_executable_evidence, where: operate.availability}

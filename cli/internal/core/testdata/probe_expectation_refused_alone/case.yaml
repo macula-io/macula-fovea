@@ -1,0 +1,6 @@
+describes: "Refusals expected with no acceptance beside them: handshake_failure also means no signature scheme in common, so a refusal is evidence only beside an accepted group."
+base: valid_complete_v0_4
+remove: []
+expect:
+  errors:
+    - {rule: probe_expectation_invalid, where: in_motion.confidentiality}

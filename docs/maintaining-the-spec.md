@@ -30,8 +30,9 @@ The spec, not any assessment, is what gets versioned.
 | Step | Deliverable | State |
 |---|---|---|
 | v0.2 | Axes, attributes, cell schema, scorecard, instantiation protocol | released 2026-09-25, archival |
-| v0.3 | Coverage-aware scorecard: `authored/total` per block and an open-gaps list | released 2026-09-25, current |
-| v0.4 | Executable evidence on measures ([proposal](../spec/proposals/v0.4-evidence/README.md)) | proposed, not normative |
+| v0.3 | Coverage-aware scorecard: `authored/total` per block and an open-gaps list | released 2026-09-25, archival |
+| v0.4 | Evidence on measures (`doc`, `test`, `scenario`, `probe`), `assessed` needs executable evidence, targets and a publication policy, signed observations (15) and the probe registry (16) | released on merge, current |
+| v0.5 | The Cucumber report cross-check (`fovea check-evidence`) and `pct_executable_evidence`, with the open questions of the [proposal](../spec/proposals/v0.4-evidence/README.md) | proposed, not normative |
 
 ## Spec, reference implementation, conformance
 

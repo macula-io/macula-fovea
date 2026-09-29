@@ -1,0 +1,6 @@
+describes: "The cadence is an ISO 8601 duration of at least a minute."
+base: valid_complete_v0_4
+remove: []
+expect:
+  errors:
+    - {rule: policy_cadence_invalid, where: fovea.yaml}

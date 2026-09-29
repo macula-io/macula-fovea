@@ -1,0 +1,6 @@
+describes: "A probe must be one the spec registers, at a registered version."
+base: valid_complete_v0_4
+remove: []
+expect:
+  errors:
+    - {rule: probe_unknown, where: in_motion.confidentiality}

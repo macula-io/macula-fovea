@@ -1,0 +1,6 @@
+describes: "A probe observes a target the header declares."
+base: valid_complete_v0_4
+remove: []
+expect:
+  errors:
+    - {rule: probe_target_undeclared, where: in_motion.confidentiality}

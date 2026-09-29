@@ -1,0 +1,6 @@
+describes: "Doc, test and scenario evidence must say where the evidence is."
+base: valid_complete_v0_4
+remove: []
+expect:
+  errors:
+    - {rule: evidence_ref_empty, where: in_motion.confidentiality}

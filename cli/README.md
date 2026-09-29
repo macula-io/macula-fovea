@@ -1,9 +1,10 @@
 # fovea (CLI)
 
 Single static Go binary implementing the fovea spec
-([v0.3](../spec/v0.3/00-overview.md) and the archival
-[v0.2](../spec/v0.2/00-overview.md); both share the grid and cell rules, v0.3
-changes only the scorecard) against an **assessment directory** (header +
+([v0.4](../spec/v0.4/00-overview.md), and the archival
+[v0.3](../spec/v0.3/00-overview.md) and [v0.2](../spec/v0.2/00-overview.md);
+all three share the grid and cell rules, v0.3 changes only the scorecard,
+v0.4 adds evidence, probe declarations, targets and a publication policy) against an **assessment directory** (header +
 cells). It is the reference implementation of the spec: where the spec says
 "the lint", it means this `lint`.
 
@@ -13,8 +14,8 @@ cells). It is the reference implementation of the spec: where the spec says
 |---|---|---|
 | `fovea init <dir>` | Reads `fovea.yaml`, computes the declared grid, creates `cells_dir` if missing and every missing `<column>.<attribute>.yaml` as an `unassessed` skeleton. Only adds files: an existing cell, even one that fails to parse, is never overwritten. Refuses to run while the header has findings. | header invalid |
 | `fovea lint <dir> [--github]` | Header checks (the fixed grid, attributes, owner, version) + grid closure (every expected cell exists) + per-cell rules + copy-paste detection (>=85% definition similarity). `--github` emits workflow commands that annotate the offending files in a PR. | any error finding |
-| `fovea score <dir> [--json]` | Computes the [scorecard](../spec/v0.3/13-scorecard.md): expected/present/missing cells, `pct_unassessed`, `na_unjustified`, `pct_by_design`, oldest `review_by` and overdue roadmaps, cells per attribute and per family. Missing cells count as unassessed. With `--json`, stdout is valid JSON even when lint fails. | lint had errors |
-| `fovea render <dir> [--format md\|html\|json]` | The scorecard, in markdown, HTML (for GitHub job summaries, both spec versions) or JSON. v0.2 headers get the frozen worst-RAG grid; v0.3 headers get the coverage-aware grid (`R 2/6`) and the complete open-gaps list, which carries every header lint error. `--html` and `--json` are short for the formats. The scorecard is written even when lint fails; the findings then go to stderr. | lint had errors |
+| `fovea score <dir> [--json]` | Computes the [scorecard](../spec/v0.4/13-scorecard.md): expected/present/missing cells, `pct_unassessed`, `na_unjustified`, `pct_by_design`, oldest `review_by` and overdue roadmaps, cells per attribute and per family. Missing cells count as unassessed. With `--json`, stdout is valid JSON even when lint fails. | lint had errors |
+| `fovea render <dir> [--format md\|html\|json]` | The scorecard, in markdown, HTML (for GitHub job summaries, both spec versions) or JSON. v0.2 headers get the frozen worst-RAG grid; v0.3 and v0.4 headers get the coverage-aware grid (`R 2/6`) and the complete open-gaps list, which carries every header lint error. `--html` and `--json` are short for the formats. The scorecard is written even when lint fails; the findings then go to stderr. | lint had errors |
 | `fovea issues <dir> [--dry-run] [--check] [--repo o/r] [--token t]` | Syncs `roadmap` cells to GitHub issues, idempotently via a `<!-- fovea-cell: <id> -->` body marker. Refuses to act when the header or any cell fails to load. `--check` fails when a roadmap cell's linked issue is closed. See [issues-bridge](../docs/issues-bridge.md). | load findings, no token without `--dry-run`, `--check` trap, API errors |
 
 `dir` defaults to the current directory and may come before or after the

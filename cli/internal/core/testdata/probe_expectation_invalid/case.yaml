@@ -1,0 +1,6 @@
+describes: "Expected groups come from the probe's vocabulary, and no group is expected both ways."
+base: valid_complete_v0_4
+remove: []
+expect:
+  errors:
+    - {rule: probe_expectation_invalid, where: in_motion.confidentiality}

@@ -1,0 +1,6 @@
+describes: "Scenario evidence names a runner: godog, whitebread or cucumber."
+base: valid_complete_v0_4
+remove: []
+expect:
+  errors:
+    - {rule: evidence_runner_unknown, where: in_motion.confidentiality}

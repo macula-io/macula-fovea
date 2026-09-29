@@ -1,0 +1,26 @@
+fovea: "0.4"
+system: fixture-valid-complete-v0-4
+assessment_date: 2026-09-29
+owner: fixture@example.org
+attributes:
+  core: [confidentiality, integrity, availability, authenticity, accountability]
+  enabled: []
+  disabled_justifications:
+    possession: Fixture hardware cannot be carried away by an adversary.
+    utility: Fixture assets carry no semantics beyond availability.
+columns:
+  actors: [internal, external, trusted_partner, machine_agent]
+  lifecycle: [create, acquire, deliver, operate, admin, decommission]
+  data: [at_rest, in_motion, in_use]
+  environment: [physical_natural, socio_legal, temporal]
+cells_dir: cells/
+targets:
+  fleet_stations:
+    kind: macula_station
+    addresses:
+      - "station.example.org:4433"
+      - "[2001:db8::10]:4433"
+policy:
+  publish: state_changes
+  cadence: PT1H
+  suspended: []

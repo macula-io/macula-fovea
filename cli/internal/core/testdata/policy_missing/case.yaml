@@ -1,0 +1,6 @@
+describes: "Probe declarations without a publication policy: nothing says what may be published."
+base: valid_complete_v0_4
+remove: []
+expect:
+  errors:
+    - {rule: policy_missing, where: fovea.yaml}

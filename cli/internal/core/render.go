@@ -45,9 +45,10 @@ func Render(dir string, jsonOut, htmlOut bool, stdout, stderr io.Writer) int {
 	}
 
 	switch {
-	case h.Fovea == "0.3" && htmlOut && !jsonOut:
+	// v0.4 changes no scorecard rule: it reads as v0.3 does.
+	case readsAsV03(h) && htmlOut && !jsonOut:
 		renderV03HTML(stdout, h, cells, headerErrs, len(errs))
-	case h.Fovea == "0.3":
+	case readsAsV03(h):
 		renderV03(stdout, h, cells, headerErrs, jsonOut)
 	case htmlOut && !jsonOut:
 		renderV02HTML(stdout, h, cells, len(errs))
@@ -139,7 +140,7 @@ func authored(c *Cell) bool {
 // and HTML all render this one value, so they cannot disagree.
 func rollV03(h *Header, cells map[string]*Cell, headerErrs []Finding, today time.Time) Roll {
 	r := Roll{
-		Version:  "0.3",
+		Version:  h.Fovea,
 		ByAttr:   map[string]string{},
 		ByFamily: map[string]string{},
 		GridV03:  map[string]map[string]string{},
