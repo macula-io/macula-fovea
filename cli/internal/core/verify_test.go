@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"os/exec"
 	"path/filepath"
@@ -266,5 +267,105 @@ func TestVerifyChainCommand(t *testing.T) {
 	out.Reset()
 	if rc := RunVerify(args("c1_gap"), &out, &errOut); rc != 1 || !strings.Contains(out.String(), "C1 gap: seq 2") {
 		t.Fatalf("rc %d, stdout %q", rc, out.String())
+	}
+}
+
+// --json: the same verdicts, machine-readable; exit codes as without it.
+func TestVerifyJSONSingle(t *testing.T) {
+	repo := fixtureRepo(t)
+	file := func(n string) string { return filepath.Join("testdata", "verify", n+".hex") }
+	args := func(obs, endorsement string) []string {
+		return []string{"--realm-key", file("realm_key"), "--realm", fixtureRealm, "--profile", "pq_hybrid",
+			"--endorsement", file(endorsement), "--repo", repo, "--path", "fixture-kx", "--json", file(obs)}
+	}
+	var out, errOut bytes.Buffer
+	if rc := RunVerify(args("obs_v05", "endorsement"), &out, &errOut); rc != 0 {
+		t.Fatalf("rc %d, stderr %q", rc, errOut.String())
+	}
+	var got struct {
+		Verdict string          `json:"verdict"`
+		Refused json.RawMessage `json:"refused"`
+		Record  struct {
+			State         string            `json:"state"`
+			StateCode     int               `json:"state_code"`
+			Chained       int               `json:"chained"`
+			Seq           *uint64           `json:"seq"`
+			Slot          string            `json:"slot"`
+			SignerKeyID   string            `json:"signer_key_id"`
+			Claim         string            `json:"claim"`
+			TargetAddress string            `json:"target_address"`
+			ObservedAtMs  uint64            `json:"observed_at_ms"`
+			Outcomes      map[string]string `json:"outcomes"`
+			Assessment    struct {
+				Sha string `json:"sha"`
+			} `json:"assessment"`
+		} `json:"record"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+		t.Fatalf("not JSON: %v: %s", err, out.String())
+	}
+	r := got.Record
+	if got.Verdict != "accepted" || string(got.Refused) != "null" || r.State != "holding" || r.StateCode != 0 ||
+		r.Chained != 1 || r.Seq == nil || *r.Seq != 0 || len(r.Slot) != 64 || len(r.SignerKeyID) != 64 ||
+		r.Claim != "kx_only" || r.TargetAddress != "192.0.2.10:4433" || r.ObservedAtMs == 0 ||
+		r.Outcomes["x25519"] != "refused" || len(r.Assessment.Sha) != 40 {
+		t.Fatalf("%s", out.String())
+	}
+	out.Reset()
+	if rc := RunVerify(args("obs_v05", "endorsement_b"), &out, &errOut); rc != 1 {
+		t.Fatalf("refused: rc %d", rc)
+	}
+	var refused struct {
+		Verdict string `json:"verdict"`
+		Refused struct {
+			Step int `json:"step"`
+		} `json:"refused"`
+		Record json.RawMessage `json:"record"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &refused); err != nil || refused.Verdict != "refused" ||
+		refused.Refused.Step != 5 || string(refused.Record) != "null" {
+		t.Fatalf("%v: %s", err, out.String())
+	}
+}
+
+func TestVerifyJSONChain(t *testing.T) {
+	repo := fixtureRepo(t)
+	file := func(n string) string { return filepath.Join("testdata", "verify", n+".hex") }
+	run := func(dir string) (int, map[string]any) {
+		var out, errOut bytes.Buffer
+		rc := RunVerify([]string{"--realm-key", file("realm_key"), "--realm", fixtureRealm, "--profile", "pq_hybrid",
+			"--endorsement", file("endorsement"), "--repo", repo, "--path", "fixture-kx", "--json",
+			"--chain", filepath.Join("testdata", "verify", "chain", dir)}, &out, &errOut)
+		var got map[string]any
+		if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+			t.Fatalf("%s: not JSON: %v: %s %s", dir, err, out.String(), errOut.String())
+		}
+		return rc, got
+	}
+	rc, got := run("continuous")
+	if rc != 0 || got["continuous"] != float64(1) || got["chained"] != float64(5) || len(got["items"].([]any)) != 5 {
+		t.Fatalf("continuous: rc %d %v", rc, got)
+	}
+	rc, got = run("c1_gap")
+	gaps := got["gaps"].([]any)
+	if rc != 1 || got["continuous"] != float64(0) || len(gaps) != 1 ||
+		gaps[0].(map[string]any)["from"] != float64(2) || gaps[0].(map[string]any)["to"] != float64(2) {
+		t.Fatalf("c1_gap: rc %d %v", rc, got)
+	}
+	var seqs []float64
+	for _, it := range got["items"].([]any) {
+		seqs = append(seqs, it.(map[string]any)["seq"].(float64))
+	}
+	if fmt.Sprint(seqs) != "[0 1 3 4]" {
+		t.Fatalf("items not in seq order: %v", seqs)
+	}
+	_, got = run("c6_restart")
+	if len(got["restarts"].([]any)) != 1 {
+		t.Fatalf("c6: %v", got)
+	}
+	_, got = run("c2_fork")
+	forks := got["forks"].([]any)
+	if len(forks) != 1 || len(forks[0].(map[string]any)["hashes"].([]any)) != 2 {
+		t.Fatalf("c2: %v", got)
 	}
 }

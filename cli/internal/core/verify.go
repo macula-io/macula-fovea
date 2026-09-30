@@ -111,6 +111,10 @@ type Verified struct {
 	Prev                                  []byte
 	Key, Subject                          []byte
 	WireHash                              [32]byte
+	StationNode                           []byte
+	Publish                               string
+	KeyID, Slot                           [32]byte
+	File                                  string
 	revision                              *Header
 }
 
@@ -226,7 +230,15 @@ func VerifyObservation(in VerifyInput) (*Verified, *Refusal) {
 		Observer: observer, CreatedAt: created, ObservedAt: p.observedAt, AssessmentSHA: p.assessmentSHA,
 		Outcomes: p.outcomes, Chained: p.chained, Seq: p.seq, Prev: p.prev, Key: obs.Key, Subject: obs.Subject,
 		WireHash: sha256.Sum256(in.Observation), revision: h,
+		StationNode: p.stationNode, Publish: publishNames[p.publish], KeyID: obs.KeyID, Slot: slotOf(obs),
 	}, nil
+}
+
+// slotOf is a verified record's DHT storage key: its signer key id and
+// subject, the slot a chain lives in.
+func slotOf(r record.Record) [32]byte {
+	key, _ := record.StorageKey(r)
+	return key
 }
 
 // createdAt reads a record's created_at before it is verified, since
@@ -580,6 +592,7 @@ flags (required but --ref and --chain):
   --path dir        the assessment's directory inside that repository
   --ref r           the ref whose history must hold that revision (default HEAD)
   --chain dir       the kept records of one slot, instead of one observation
+  --json            the same verdict as JSON on stdout (exit codes unchanged)
 
 exit 0 accepted (with --chain: continuous), 1 refused or not continuous,
 2 usage.`
@@ -592,8 +605,13 @@ func RunVerify(args []string, stdout, stderr io.Writer) int {
 	}
 	flags := map[string]string{}
 	var files, endorsementFiles []string
+	jsonOut := false
 	for i := 0; i < len(args); i++ {
 		a := args[i]
+		if a == "--json" {
+			jsonOut = true
+			continue
+		}
 		name, value, hasValue := strings.Cut(a, "=")
 		switch {
 		case !strings.HasPrefix(a, "--"):
@@ -656,7 +674,7 @@ func RunVerify(args []string, stdout, stderr io.Writer) int {
 	in := ChainInput{Endorsements: endorsements, RealmKey: realmKey, RealmName: flags["--realm"], Profile: p,
 		Assessment: GitRevision(flags["--repo"], ref, flags["--path"]), NowMs: time.Now().UnixMilli()}
 	if chain != "" {
-		return runChain(in, chain, stdout, stderr)
+		return runChain(in, chain, flags["--path"], ref, jsonOut, stdout, stderr)
 	}
 	observation, err := ReadBytes(files[0])
 	if err != nil {
@@ -664,6 +682,9 @@ func RunVerify(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	v, refusal := verifyWithAny(in, observation)
+	if jsonOut {
+		return writeRecordJSON(stdout, files[0], v, refusal, flags["--path"], ref)
+	}
 	if refusal != nil {
 		fmt.Fprintf(stderr, "fovea verify: %v\n", refusal)
 		return 1
@@ -688,7 +709,7 @@ func RunVerify(args []string, stdout, stderr io.Writer) int {
 }
 
 // runChain verifies the *.hex records in dir as one slot's kept set.
-func runChain(in ChainInput, dir string, stdout, stderr io.Writer) int {
+func runChain(in ChainInput, dir, path, ref string, jsonOut bool, stdout, stderr io.Writer) int {
 	files, err := filepath.Glob(filepath.Join(dir, "*.hex"))
 	if err != nil || len(files) == 0 {
 		fmt.Fprintf(stderr, "fovea verify: no *.hex records in %s\n", dir)
@@ -704,10 +725,13 @@ func runChain(in ChainInput, dir string, stdout, stderr io.Writer) int {
 		}
 		records = append(records, b)
 	}
-	r, err := VerifyChain(in, records)
+	r, err := VerifyChainFiles(in, records, files)
 	if err != nil {
 		fmt.Fprintf(stderr, "fovea verify: %v\n", err)
 		return 1
+	}
+	if jsonOut {
+		return writeChainJSON(stdout, r, path, ref)
 	}
 	verdict := "not continuous"
 	if r.Continuous {

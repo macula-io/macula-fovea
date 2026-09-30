@@ -41,6 +41,16 @@ type ChainReport struct {
 	Holes                        []string
 	NotEveryResult               bool
 	Continuous                   bool
+	// Items are the accepted records, chained ones in seq order, then the
+	// unchained; Refusals name the file each refusal came from.
+	Items    []*Verified
+	Refusals []FileRefusal
+}
+
+// FileRefusal is one record the chain check refused, and its file.
+type FileRefusal struct {
+	File    string
+	Refusal *Refusal
 }
 
 // Gap is a run of missing seqs, From to To inclusive.
@@ -49,18 +59,27 @@ type Gap struct{ From, To uint64 }
 // VerifyChain verifies each record and reports the set's continuity. Records
 // of more than one slot are an error: a chain is one signer key and subject.
 func VerifyChain(in ChainInput, records [][]byte) (ChainReport, error) {
+	names := make([]string, len(records))
+	return VerifyChainFiles(in, records, names)
+}
+
+// VerifyChainFiles is VerifyChain with the file each record was read from,
+// named in its refusal.
+func VerifyChainFiles(in ChainInput, records [][]byte, names []string) (ChainReport, error) {
 	r := ChainReport{Records: len(records)}
 	if err := oneSlot(records); err != nil {
 		return ChainReport{}, err
 	}
 	seen := map[[32]byte]bool{}
-	var chained []*Verified
-	for _, wire := range records {
+	var chained, unchained []*Verified
+	for i, wire := range records {
 		v, refusal := verifyWithAny(in, wire)
 		if refusal != nil {
 			r.Refused = append(r.Refused, refusal)
+			r.Refusals = append(r.Refusals, FileRefusal{File: names[i], Refusal: refusal})
 			continue
 		}
+		v.File = names[i]
 		if seen[v.WireHash] {
 			continue
 		}
@@ -68,10 +87,21 @@ func VerifyChain(in ChainInput, records [][]byte) (ChainReport, error) {
 		r.Accepted++
 		if !v.Chained {
 			r.Unchained++
+			unchained = append(unchained, v)
 			continue
 		}
 		chained = append(chained, v)
 	}
+	// The items are a sorted COPY: readChains below reads the records in the
+	// order they came, as it always has.
+	items := append([]*Verified{}, chained...)
+	sort.SliceStable(items, func(i, j int) bool {
+		if items[i].Seq != items[j].Seq {
+			return items[i].Seq < items[j].Seq
+		}
+		return items[i].CreatedAt < items[j].CreatedAt
+	})
+	r.Items = append(items, unchained...)
 	readChains(&r, chained)
 	r.Continuous = len(r.Refused) == 0 && len(chained) > 0 && !r.NotEveryResult &&
 		len(r.C1)+len(r.C2)+len(r.C3)+len(r.C4)+len(r.C5)+len(r.C7)+r.C6 == 0

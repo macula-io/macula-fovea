@@ -118,6 +118,7 @@ func run(argv []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stdout, issuesUsage)
 		return 0
 	case argv[0] == "verify":
+		core.ToolVersion = toolVersion()
 		return core.RunVerify(argv[1:], stdout, stderr)
 	}
 	dir := "."

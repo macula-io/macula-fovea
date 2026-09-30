@@ -7,6 +7,16 @@ Two version lines live in this repository and are kept apart:
 - **Spec** versions (`spec/vX.Y/`): declared by an assessment header as
   `fovea: "X.Y"`. A tool release says which spec versions it reads.
 
+## Unreleased
+
+- **`fovea verify --json`**, for one record and with `--chain`: the same
+  verdict as JSON on stdout (per record: slot, signer key id, observer, claim,
+  target, state and its code, outcomes, observed and signed times, seq and
+  prev, the assessment sha; per chain: continuous, the counts, every finding
+  by its spec code with gaps as ranges and forks with their hashes, refusals
+  by file, and the records in seq order). No booleans, times in ms and ISO
+  8601, hex lowercase. Human output and exit codes are unchanged.
+
 ## Tool 0.2.0 (2026-09-30), reads spec 0.2 to 0.5
 
 Reads spec 0.4 and 0.5 (below), and adds `fovea verify`: the offline
