@@ -35,12 +35,16 @@ type ChainReport struct {
 	Refused                      []*Refusal
 	FirstSeq, LastSeq            uint64
 	FirstObserved, LastObserved  uint64
-	C1, C2, C3, C4, C5, C7       []uint64
+	C1                           []Gap
+	C2, C3, C4, C5, C7           []uint64
 	C6                           int
 	Holes                        []string
 	NotEveryResult               bool
 	Continuous                   bool
 }
+
+// Gap is a run of missing seqs, From to To inclusive.
+type Gap struct{ From, To uint64 }
 
 // VerifyChain verifies each record and reports the set's continuity. Records
 // of more than one slot are an error: a chain is one signer key and subject.
@@ -89,6 +93,9 @@ func oneSlot(records [][]byte) error {
 		if err != nil {
 			continue
 		}
+		if t, _ := tbs.Get("type"); t.Kind() != cbor.KindUInt || !isObservationType(t) {
+			continue
+		}
 		sv, _ := tbs.Get("subject")
 		sub, _ := sv.AsBytes()
 		if key == nil {
@@ -99,6 +106,11 @@ func oneSlot(records [][]byte) error {
 		}
 	}
 	return nil
+}
+
+func isObservationType(t cbor.Value) bool {
+	n, ok := t.AsInt64()
+	return ok && n == int64(observationType)
 }
 
 // verifyWithAny accepts a record with the first endorsement that admits it,
@@ -142,30 +154,36 @@ func readChains(r *ChainReport, records []*Verified) {
 		}
 		heads = append(heads, v)
 	}
-	var groups [][]*Verified
-	var walk func(group []*Verified)
-	walk = func(group []*Verified) {
+	// Groups begun at a true head (prev zero, or a prev naming no record held)
+	// are ordered and compared below. A fork's branches begin at a follower of
+	// a record held; the fork is C2 where it is found, and its branches are
+	// read inside, not compared again.
+	var groups, branches [][]*Verified
+	var walk func(group []*Verified, branch bool)
+	walk = func(group []*Verified, branch bool) {
 		last := group[len(group)-1]
 		next := followers[last.WireHash]
 		sort.Slice(next, func(i, j int) bool { return next[i].CreatedAt < next[j].CreatedAt })
 		switch {
-		case len(next) == 0:
-			groups = append(groups, group)
 		case len(next) == 1:
-			walk(append(group, next[0]))
-		default:
-			// Two records follow one: a fork. Each branch is its own group.
+			walk(append(group, next[0]), branch)
+			return
+		case len(next) > 1:
 			r.C2 = append(r.C2, next[1].Seq)
-			groups = append(groups, group)
 			for _, n := range next {
-				walk([]*Verified{n})
+				walk([]*Verified{n}, true)
 			}
+		}
+		if branch {
+			branches = append(branches, group)
+		} else {
+			groups = append(groups, group)
 		}
 	}
 	for _, h := range heads {
-		walk([]*Verified{h})
+		walk([]*Verified{h}, false)
 	}
-	for _, g := range groups {
+	for _, g := range append(append([][]*Verified{}, groups...), branches...) {
 		readGroup(r, g)
 	}
 	sort.Slice(groups, func(i, j int) bool { return groups[i][0].CreatedAt < groups[j][0].CreatedAt })
@@ -178,13 +196,20 @@ func readChains(r *ChainReport, records []*Verified) {
 		case head.Seq == 0:
 			r.C6++
 			r.Holes = append(r.Holes, fmt.Sprintf("restart after seq %d (%s), at %s", highest.Seq, ms(highest.ObservedAt), ms(head.ObservedAt)))
+		case head.Seq == highest.Seq+1:
+			// Nothing missing between, yet the head does not follow the record
+			// held at the previous seq: its prev names another record there.
+			r.C2 = append(r.C2, head.Seq)
 		case head.Seq > highest.Seq:
-			for s := highest.Seq + 1; s < head.Seq; s++ {
-				r.C1 = append(r.C1, s)
-			}
+			r.C1 = append(r.C1, Gap{highest.Seq + 1, head.Seq - 1})
 		default:
 			r.C2 = append(r.C2, head.Seq)
 		}
+	}
+	if len(groups) == 0 {
+		// Every record follows another: a cycle cannot be signed, so this is
+		// only a set of branches; its forks are already C2.
+		groups = branches
 	}
 	first, last := groups[0][0], groups[len(groups)-1]
 	r.FirstSeq, r.FirstObserved = first.Seq, first.ObservedAt
@@ -212,10 +237,17 @@ func readGroup(r *ChainReport, g []*Verified) {
 		}
 		cadence := max(cadenceMs(before.revision), cadenceMs(v.revision))
 		slack := min(uint64(clockToleranceMs), cadence/2)
-		if v.ObservedAt > before.ObservedAt && v.ObservedAt-before.ObservedAt > cadence+slack {
+		if absDiff(v.ObservedAt, before.ObservedAt) > cadence+slack {
 			r.C5 = append(r.C5, v.Seq)
 		}
 	}
+}
+
+func absDiff(a, b uint64) uint64 {
+	if a > b {
+		return a - b
+	}
+	return b - a
 }
 
 // cadenceMs is a revision's policy.cadence in milliseconds; the lint has

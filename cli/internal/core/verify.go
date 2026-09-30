@@ -722,9 +722,16 @@ func runChain(in ChainInput, dir string, stdout, stderr io.Writer) int {
 	for _, f := range []struct {
 		name string
 		seqs []uint64
-	}{{"C1 gap", r.C1}, {"C2 fork", r.C2}, {"C3 broken link", r.C3}, {"C4 out of order", r.C4}, {"C5 late", r.C5}, {"C7 signed late", r.C7}} {
+	}{{"C2 fork", r.C2}, {"C3 broken link", r.C3}, {"C4 out of order", r.C4}, {"C5 late", r.C5}, {"C7 signed late", r.C7}} {
 		if len(f.seqs) > 0 {
 			fmt.Fprintf(stdout, "  %s: seq %s\n", f.name, joinSeqs(f.seqs))
+		}
+	}
+	for _, g := range r.C1 {
+		if g.From == g.To {
+			fmt.Fprintf(stdout, "  C1 gap: seq %d\n", g.From)
+		} else {
+			fmt.Fprintf(stdout, "  C1 gap: seq %d to %d\n", g.From, g.To)
 		}
 	}
 	for _, hole := range r.Holes {

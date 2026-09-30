@@ -90,6 +90,11 @@ chains(Dir, Holding, A, B, Now) ->
     New = chain(Holding, A, [{0, Base + 4 * ?HOUR, 1000}, {1, Base + 5 * ?HOUR, 1000}]),
     cases(Dir, "c6_restart", [{S, W} || {S, W} <- Old] ++ [{10 + S, W} || {S, W} <- New]),
     cases(Dir, "c7_signed_late", chain(Holding, A, [{0, Base, 1000}, {1, Base + ?HOUR, 10 * 60000}, {2, Base + 2 * ?HOUR, 1000}])),
+    cases(Dir, "c2_fork_hidden", [R || {S, _} = R <- Ok, S < 3] ++
+              [{3, link(Holding, A, 3, crypto:hash(sha256, Fork), Base + 3 * ?HOUR, 1000)}]),
+    {_, W0} = lists:keyfind(0, 1, Ok),
+    cases(Dir, "duplicate", Ok ++ [{10, W0}]),
+    cases(Dir, "with_unchained", Ok ++ [{10, observation(Holding, A)}]),
     cases(Dir, "two_slots", [lists:keyfind(0, 1, Ok), {1, element(2, hd(chain(Holding, B, [{0, Base, 1000}])))}]).
 
 %% A chain from seq 0: each {Seq, ObservedAt, SignedAfterMs} links to the one before.

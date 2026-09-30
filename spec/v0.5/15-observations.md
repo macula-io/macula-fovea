@@ -187,7 +187,9 @@ by their links: a record follows the record whose wire-bytes SHA-256 is its
 Chains and fragments together are **groups**. Groups are ordered by
 `created_at` span. The head of the first group is no gap. A later group
 headed at seq 0 is C6. A later group whose head's seq is above the previous
-group's highest is a gap in one chain: C1 names every seq between. A later
+group's highest is a gap in one chain: C1 names every seq between; when
+there is none, the head's prev names a record at the previous group's highest
+seq other than the one held: C2. A later
 group whose head is neither is C2. Within a group, a record whose seq is not
 one more than the record it follows is C3.
 
@@ -231,7 +233,7 @@ store more often than the cadence, verifies what it fetches, and keeps every
 new record with the time it fetched it. A record whose created_at is more
 than 5 minutes before the keeper's previous fetch of the slot was published
 late: by its own date it existed when the keeper last looked, and was not
-there. A keeper reports it. A tombstone found in the slot is kept beside the chain;
+there. A keeper reports it. A tombstone found in the slot is kept apart from the chain's records;
 the record it withdraws shows as a C1 gap. A keeper that fetches less often than the cadence loses records
 that were published, and the gaps it then shows are its own, not the
 observer's. Several independent keepers of one slot make a lost or withheld

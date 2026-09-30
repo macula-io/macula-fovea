@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"fmt"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -194,18 +195,27 @@ func chainInput(t *testing.T, repo string) ChainInput {
 		Profile: in.Profile, Assessment: in.Assessment, NowMs: in.NowMs}
 }
 
-// Each chain case of spec v0.5 section 15 is reported as exactly its finding.
+// Each chain case of spec v0.5 section 15 is reported as exactly its own
+// findings and no other: own is the whole report of C1 to C7.
 func TestChainFindings(t *testing.T) {
 	repo := fixtureRepo(t)
-	cases := map[string]func(ChainReport) bool{
-		"continuous":      func(r ChainReport) bool { return r.Continuous && r.Accepted == 5 && r.FirstSeq == 0 && r.LastSeq == 4 },
-		"c1_gap":          func(r ChainReport) bool { return !r.Continuous && len(r.C1) == 1 && r.C1[0] == 2 },
-		"c2_fork":         func(r ChainReport) bool { return !r.Continuous && len(r.C2) > 0 },
-		"c3_seq_skips":    func(r ChainReport) bool { return !r.Continuous && len(r.C3) == 1 && r.C3[0] == 3 },
-		"c4_out_of_order": func(r ChainReport) bool { return !r.Continuous && len(r.C4) == 1 && r.C4[0] == 2 },
-		"c5_late":         func(r ChainReport) bool { return !r.Continuous && len(r.C5) == 1 && r.C5[0] == 2 },
-		"c6_restart":      func(r ChainReport) bool { return !r.Continuous && r.C6 == 1 },
-		"c7_signed_late":  func(r ChainReport) bool { return !r.Continuous && len(r.C7) == 1 && r.C7[0] == 1 },
+	type findings struct {
+		c1                 []Gap
+		c2, c3, c4, c5, c7 []uint64
+		c6                 int
+	}
+	cases := map[string]findings{
+		"continuous":      {},
+		"duplicate":       {},
+		"with_unchained":  {},
+		"c1_gap":          {c1: []Gap{{2, 2}}},
+		"c2_fork":         {c2: []uint64{2}},
+		"c2_fork_hidden":  {c2: []uint64{3}},
+		"c3_seq_skips":    {c3: []uint64{3}},
+		"c4_out_of_order": {c4: []uint64{2}},
+		"c5_late":         {c5: []uint64{2}},
+		"c6_restart":      {c6: 1},
+		"c7_signed_late":  {c7: []uint64{1}},
 	}
 	for name, want := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -213,14 +223,25 @@ func TestChainFindings(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !want(r) {
-				t.Fatalf("%+v", r)
+			got := findings{c1: r.C1, c2: r.C2, c3: r.C3, c4: r.C4, c5: r.C5, c7: r.C7, c6: r.C6}
+			if fmt.Sprint(got) != fmt.Sprint(want) {
+				t.Fatalf("findings %+v, want %+v", got, want)
 			}
-			clean := len(r.C1)+len(r.C2)+len(r.C3)+len(r.C4)+len(r.C5)+r.C6+len(r.C7) == 0
-			if clean != (name == "continuous") {
-				t.Fatalf("findings beyond the case's own: %+v", r)
+			clean := fmt.Sprint(want) == fmt.Sprint(findings{})
+			if r.Continuous != clean || len(r.Refused) != 0 {
+				t.Fatalf("continuous %v, refused %v, want continuous %v", r.Continuous, r.Refused, clean)
 			}
 		})
+	}
+	r, _ := VerifyChain(chainInput(t, repo), chainRecords(t, "continuous"))
+	if r.Accepted != 5 || r.FirstSeq != 0 || r.LastSeq != 4 {
+		t.Fatalf("continuous: %+v", r)
+	}
+	if r, _ := VerifyChain(chainInput(t, repo), chainRecords(t, "duplicate")); r.Accepted != 5 || r.Records != 6 {
+		t.Fatalf("a record kept twice counts once: %+v", r)
+	}
+	if r, _ := VerifyChain(chainInput(t, repo), chainRecords(t, "with_unchained")); r.Unchained != 1 || r.Accepted != 6 {
+		t.Fatalf("a v0.4 record of the slot is unchained: %+v", r)
 	}
 }
 
