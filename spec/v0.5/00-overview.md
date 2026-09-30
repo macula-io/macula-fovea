@@ -15,7 +15,8 @@ assessment format exactly as v0.4 has it:
 1. **Chained observations** (15-observations): an observation record carries
    `seq` and `prev`, linking every record an observer signs for one claim and
    station into a chain, and a verifier given a kept set of them reports every
-   gap, fork, broken link, out-of-order or late record, and restart.
+   gap, fork, broken link, out-of-order, late or late-signed record, and
+   restart; a keeper keeps the time it fetched each record.
 
 A v0.4 observation still verifies, as a record in no chain. A header may
 declare 0.4 or 0.5; both read identically.

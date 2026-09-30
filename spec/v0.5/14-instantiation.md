@@ -76,8 +76,8 @@ policy:
 - **`publish`**: `every_result` publishes every observation; `state_changes`
   publishes an observation whose state differs from the station's previous one
   for the claim, and before the latest record expires signs a fresh record
-  of the same round (a new `version` and `created_at`; the same
-  `observed_at` and outcomes), so a reader always finds a live one. An observer signs and keeps
+  of the same round (a new `version` and `created_at`, and from v0.5 a new
+  `seq` and `prev`; the same `observed_at` and outcomes), so a reader always finds a live one. An observer signs and keeps
   every observation either way.
 - **`cadence`**: how often a claim is observed, from a minute to seven days.
   Days, hours, minutes and seconds only (`P1D`, `PT1H`, `PT15M`), since a

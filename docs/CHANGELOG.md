@@ -17,10 +17,12 @@ and a header may declare 0.4 or 0.5.
   `prev` (SHA-256 of the previous record's wire bytes), per observer, claim
   and station. The observer keeps its place across restarts; a lost place is
   a visible restart. A verifier given a kept set reports gaps, forks, broken
-  links, out-of-order and late records, and restarts; a set is continuous only
-  under `policy.publish: every_result`.
+  links, out-of-order, late and late-signed records (signed more than 5
+  minutes after observed), and restarts; a set is continuous only under
+  `policy.publish: every_result`, with no restart in it.
 - **Keeping a history** (informative): a keeper fetches each slot more often
-  than the cadence; a keeper publishing every 15 minutes makes a `broken`
+  than the cadence and keeps each record's fetch time, which shows a late
+  publication; a keeper publishing every 15 minutes makes a `broken`
   claim public within about 15 minutes.
 - The lint reads a 0.5 header as 0.4 (`valid_complete_v0_5`).
 - **`fovea verify`** (added 2026-09-29, spec v0.4 records): the nine offline

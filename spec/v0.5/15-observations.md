@@ -85,16 +85,22 @@ A **slot** is one signer key and one `subject`: one observer, assessment
 system, claim and station address, as a record store keeps it. Every record
 an observer signs in a slot, published or not, is the next link of that
 slot's chain: `seq` one more than the last one it signed there, `prev` the
-SHA-256 of that record's wire bytes.
+SHA-256 of that record's wire bytes. A record's **wire bytes** are the
+deterministic CBOR of its signed object `{key, tbs, signature}`, exactly as
+handed to the record store and as the store returns it; nobody re-encodes
+them to hash them.
 
-- **The observer keeps its place.** Before it publishes a record, it writes
-  the record's `seq` and the SHA-256 of its wire bytes to storage that
-  survives a restart, and it writes it atomically, so a crash leaves either
-  the old place or the new one. Signing, then writing the place, then
-  publishing means no published record is ever missing from its own chain.
+- **The observer keeps its place.** After signing a record and before it
+  publishes it or signs the slot's next one, it writes the record's `seq`, the
+  SHA-256 of its wire bytes, and the wire bytes themselves to storage that
+  survives a restart, atomically, so a crash leaves either the old place or
+  the new one. After a restart it publishes the kept record again if it has
+  not expired, so an honest crash between writing and publishing costs no
+  link.
 - **A lost place is a restart, never a silence.** An observer that has lost
-  its place (a new volume, a new key) starts again at `seq` 0. A reader sees
-  the restart; nothing is hidden by it.
+  its place (a new volume) starts again at `seq` 0. A reader sees the
+  restart, and a set with one is never continuous across it. A new signer
+  key is a new slot, not a restart.
 - **Continuity is claimed only under `every_result`.** Under
   `state_changes` the observer signs rounds it does not publish, so a kept
   history of published records has gaps by design, and a verifier reports
@@ -152,7 +158,8 @@ endorsement that covered it has expired:
    probe and version the verifier's registry knows, 16-probes), and whose
    `expect` is `expected`, the same groups on the same sides; and that
    declaration's target lists `target_address` with `node_id` equal to
-   `station_node`. A revision the verifier cannot obtain refuses here: the
+   `station_node`; and (v0.5 records) the header's `policy.publish` is the
+   payload's `publish`. A revision the verifier cannot obtain refuses here: the
    record's expectation is then the observer's word, not the claim's.
 
 A refusal names the first step that failed. What an accepted observation
@@ -170,36 +177,56 @@ state follows from them. It does not prove:
 ### Verifying a chain
 
 A verifier given a set of records it holds for one slot (the same signer key
-and `subject`) accepts each one by the steps above, then orders them by
-`seq` and reports, for the whole set:
+and `subject`) accepts each one by the steps above. Byte-identical records
+count once. A record with v0.4's thirteen keys is reported as unchained and
+takes no part below. The verifier then **partitions** the rest into chains
+by their links: a record follows the record whose wire-bytes SHA-256 is its
+`prev`; a record whose `prev` is 32 zero bytes heads a chain; a record whose
+`prev` matches no record in the set heads a **fragment**. It reports:
 
-- **C1 gap**: a `seq` between the lowest and the highest that no record in
-  the set has.
-- **C2 fork**: two different records with the same `seq`. The observer
-  signed two histories; the set is not a chain.
-- **C3 broken link**: a record whose `prev` is not the SHA-256 of the wire
-  bytes of the set's record with `seq` − 1.
+- **C1 gap**: a record whose `seq` − 1 is not in the set within its chain or
+  fragment (the fragment's head, unless its `seq` is 0), and each missing
+  `seq` between two parts of one chain.
+- **C2 fork**: two different records following the same record, or two
+  chains or fragments whose `created_at` spans overlap. The observer signed
+  two histories; the set is not a chain.
+- **C3 broken link**: a record with `seq` above 0 whose `prev` is 32 zero
+  bytes, or whose `seq` is not one more than the record it follows.
 - **C4 out of order**: a record whose `created_at` is not after that of the
-  record with `seq` − 1.
-- **C5 late**: consecutive records whose `observed_at` are further apart than
-  the `policy.cadence` of the revision the later one names, plus 5 minutes.
-- **C6 restart**: more than one chain in the set, each beginning at `seq` 0
-  (a lost place). Each is checked on its own.
+  record it follows.
+- **C5 late**: a record and the one it follows whose `observed_at` are
+  further apart than the larger of the two `policy.cadence`s their revisions
+  name, plus the smaller of 5 minutes and half that cadence.
+- **C6 restart**: a chain headed at `seq` 0 after another chain or fragment
+  in the set ends (a lost place). The report names the hole between them.
+- **C7 signed late**: a record whose `created_at` is more than 5 minutes
+  after its `observed_at`.
 
-The set is **continuous** from its first `observed_at` to its last only if
-every record is accepted, it shows no C1 to C5, and every revision it names
-has `policy.publish` `every_result`. What a continuous set proves: the
-observer signed these observations in this order, one per cadence, with none
-missing between the first and the last that the set holds. It does not prove
-that the observer signed nothing after the last record, nor anything that an
-accepted observation does not prove.
+C3, C4 and C5 compare only a record with the record it follows. The set is
+**continuous** from its first `observed_at` to its last only if every record
+is accepted, it shows none of C1 to C7, and every revision it names has
+`policy.publish` `every_result`. A chain inside a set with C6 may be
+continuous over its own span; the set is not.
+
+What a continuous set proves: the observer signed these observations in this
+order, dated them at most one cadence (and its slack) apart, and signed each
+within 5 minutes of the time it states it observed. It does not prove that
+those dates are true: an observer that fell silent and later signed the
+missed rounds with earlier times, both `observed_at` and `created_at`,
+produces a continuous set. Only a keeper that keeps the time it fetched each
+record, or several keepers compared, shows such a late publication (below).
+It does not prove that the observer signed nothing after the last record,
+nor anything that an accepted observation does not prove.
 
 ## Informative: keeping a history
 
 A record store keeps only the latest record of a slot, so a history exists
 only if someone keeps it. A **keeper** fetches each slot from the record
 store more often than the cadence, verifies what it fetches, and keeps every
-new record. A keeper that fetches less often than the cadence loses records
+new record with the time it fetched it. A record fetched more than one
+cadence plus 5 minutes after its `created_at` was published late, and a
+keeper reports it. A tombstone found in the slot is kept beside the chain;
+the record it withdraws shows as a C1 gap. A keeper that fetches less often than the cadence loses records
 that were published, and the gaps it then shows are its own, not the
 observer's. Several independent keepers of one slot make a lost or withheld
 record visible to every reader who compares them.
