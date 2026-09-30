@@ -28,7 +28,7 @@ here, caused by whom, and what do we honestly have against it."*
 > declarations whose observations are signed records anyone can verify
 > offline against the realm key (spec 15, 16), chained so that a kept
 > history shows every missing, duplicated or late observation (v0.5).
-> The [`fovea`](cli/) CLI (`init`, `lint`, `score`, `render`, `issues`) is a
+> The [`fovea`](cli/) CLI (`init`, `lint`, `score`, `render`, `issues`, `verify`) is a
 > single static Go binary and the reference implementation of the spec: its
 > `lint` enforces the fixed grid, the status and content rules and the
 > anti-theater rules, each one proven by a rule case under
@@ -45,6 +45,13 @@ a spreadsheet with vibes. Threat models kept in Word documents and wiki
 tables rot quietly: cells go unfilled, copies drift, and nobody can diff "the
 threat model" against "the code". Fovea moves the model into the repository
 next to the code and makes it lintable, scoreable, and renderable.
+
+Fovea assesses any system, Macula or not: the spec, the lint, the scorecard,
+signed observations, their chain and `fovea verify` describe and check
+claims about whatever the assessment names. What is Macula-specific today is
+how observations are signed and carried (macula records, checked against a
+Macula realm key) and the one probe that exists (`kx_group`, which observes
+Macula stations); probes of other systems are planned, not built.
 
 **Start here:** [`docs/getting-started.md`](docs/getting-started.md) is the
 ten-minute zero-to-clean-grid walkthrough;
