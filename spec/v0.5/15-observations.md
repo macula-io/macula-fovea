@@ -94,8 +94,8 @@ them to hash them.
   publishes it or signs the slot's next one, it writes the record's `seq`, the
   SHA-256 of its wire bytes, and the wire bytes themselves to storage that
   survives a restart, atomically, so a crash leaves either the old place or
-  the new one. After a restart it publishes the kept record again if it has
-  not expired, so an honest crash between writing and publishing costs no
+  the new one. After a restart it publishes the kept record again if it had
+  published it and it has not expired, so an honest crash between writing and publishing costs no
   link.
 - **A lost place is a restart, never a silence.** An observer that has lost
   its place (a new volume) starts again at `seq` 0. A reader sees the
@@ -184,23 +184,28 @@ by their links: a record follows the record whose wire-bytes SHA-256 is its
 `prev`; a record whose `prev` is 32 zero bytes heads a chain; a record whose
 `prev` matches no record in the set heads a **fragment**. It reports:
 
-- **C1 gap**: a record whose `seq` − 1 is not in the set within its chain or
-  fragment (the fragment's head, unless its `seq` is 0), and each missing
-  `seq` between two parts of one chain.
-- **C2 fork**: two different records following the same record, or two
-  chains or fragments whose `created_at` spans overlap. The observer signed
-  two histories; the set is not a chain.
-- **C3 broken link**: a record with `seq` above 0 whose `prev` is 32 zero
-  bytes, or whose `seq` is not one more than the record it follows.
+Chains and fragments together are **groups**. Groups are ordered by
+`created_at` span. The head of the first group is no gap. A later group
+headed at seq 0 is C6. A later group whose head's seq is above the previous
+group's highest is a gap in one chain: C1 names every seq between. A later
+group whose head is neither is C2. Within a group, a record whose seq is not
+one more than the record it follows is C3.
+
+- **C1 gap**: as above.
+- **C2 fork**: two different records following the same record, two groups
+  whose `created_at` spans overlap, or a later group as above. The observer
+  signed two histories; the set is not a chain.
+- **C3 broken link**: as above.
 - **C4 out of order**: a record whose `created_at` is not after that of the
   record it follows.
 - **C5 late**: a record and the one it follows whose `observed_at` are
   further apart than the larger of the two `policy.cadence`s their revisions
   name, plus the smaller of 5 minutes and half that cadence.
-- **C6 restart**: a chain headed at `seq` 0 after another chain or fragment
-  in the set ends (a lost place). The report names the hole between them.
-- **C7 signed late**: a record whose `created_at` is more than 5 minutes
-  after its `observed_at`.
+- **C6 restart**: as above, a lost place. The report names the hole between
+  the groups.
+- **C7 signed late**: a record whose revision names `policy.publish`
+  `every_result` and whose `created_at` is more than 5 minutes after its
+  `observed_at` (under `state_changes` a refresh record is late by design).
 
 C3, C4 and C5 compare only a record with the record it follows. The set is
 **continuous** from its first `observed_at` to its last only if every record
@@ -223,9 +228,10 @@ nor anything that an accepted observation does not prove.
 A record store keeps only the latest record of a slot, so a history exists
 only if someone keeps it. A **keeper** fetches each slot from the record
 store more often than the cadence, verifies what it fetches, and keeps every
-new record with the time it fetched it. A record fetched more than one
-cadence plus 5 minutes after its `created_at` was published late, and a
-keeper reports it. A tombstone found in the slot is kept beside the chain;
+new record with the time it fetched it. A record whose created_at is more
+than 5 minutes before the keeper's previous fetch of the slot was published
+late: by its own date it existed when the keeper last looked, and was not
+there. A keeper reports it. A tombstone found in the slot is kept beside the chain;
 the record it withdraws shows as a C1 gap. A keeper that fetches less often than the cadence loses records
 that were published, and the gaps it then shows are its own, not the
 observer's. Several independent keepers of one slot make a lost or withheld
