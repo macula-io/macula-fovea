@@ -148,22 +148,22 @@ assessments/
 The tool (the `fovea` CLI and the GitHub Action) is released as `vX.Y.Z`
 git tags; `fovea --version` prints the tool version and the spec versions
 it reads. The tool version and the spec version are separate lines: tool
-0.1.0 reads assessments written to spec v0.2 and v0.3; v0.4 and v0.5 are read
-from the next tool release on (`main` reads them now). See
+0.1.0 reads assessments written to spec v0.2 and v0.3; tool 0.2.0 reads v0.2
+to v0.5 and adds `fovea verify`. See
 [`docs/CHANGELOG.md`](docs/CHANGELOG.md).
 
 Use the Action pinned to the full commit sha of a release, with the tag as
 a comment, never `@main` or a bare tag (both can move under you):
 
 ```yaml
-- uses: macula-io/macula-fovea@<40-char sha of the release> # v0.1.0
+- uses: macula-io/macula-fovea@<40-char sha of the release> # v0.2.0
   with:
     dir: security/fovea
     command: lint
 ```
 
 Resolve the sha of a tag with
-`gh api repos/macula-io/macula-fovea/commits/v0.1.0 --jq .sha`, and let
+`gh api repos/macula-io/macula-fovea/commits/v0.2.0 --jq .sha`, and let
 Dependabot keep the pin current. In `.github/dependabot.yml`:
 
 ```yaml

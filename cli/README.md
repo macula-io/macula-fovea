@@ -82,7 +82,7 @@ after it.
 `action.yml` at the repo root wraps the CLI for consumers:
 
 ```yaml
-- uses: macula-io/macula-fovea@<40-char sha of the release> # v0.1.0
+- uses: macula-io/macula-fovea@<40-char sha of the release> # v0.2.0
   with:
     dir: security/fovea
     command: lint          # lint | score | render | issues
@@ -110,7 +110,7 @@ the artifacts with:
 ```bash
 cd cli
 go build -o fovea ./cmd/fovea                              # fovea --version: dev
-go build -ldflags "-X main.version=0.1.0" -o fovea ./cmd/fovea   # a release build
+go build -ldflags "-X main.version=0.2.0" -o fovea ./cmd/fovea   # a release build
 go test -race ./...
 ```
 

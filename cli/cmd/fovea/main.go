@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime/debug"
 	"strings"
 
 	"github.com/macula-io/macula-fovea/cli/internal/core"
@@ -72,6 +73,15 @@ func parseIssuesFlags(args []string) core.IssuesOpts {
 // the spec version; the spec versions this build reads come from core.
 var version = "dev"
 
+// toolVersion is version, or for a build without it baked in, the module
+// version `go install ...@vX.Y.Z` records; "dev" for a source build.
+func toolVersion() string {
+	if info, ok := debug.ReadBuildInfo(); ok && version == "dev" && strings.HasPrefix(info.Main.Version, "v") {
+		return strings.TrimPrefix(info.Main.Version, "v")
+	}
+	return version
+}
+
 // knownFlag lists every flag of init, lint, score and render; takes says
 // which command accepts which. A known flag on the wrong command is refused
 // rather than ignored: `lint --json` must not look like it produced JSON.
@@ -102,7 +112,7 @@ func run(argv []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stdout, usage)
 		return 0
 	case argv[0] == "--version":
-		fmt.Fprintf(stdout, "fovea %s (reads spec %s)\n", version, strings.Join(core.SpecVersions(), ", "))
+		fmt.Fprintf(stdout, "fovea %s (reads spec %s)\n", toolVersion(), strings.Join(core.SpecVersions(), ", "))
 		return 0
 	case argv[0] == "--help-issues":
 		fmt.Fprintln(stdout, issuesUsage)

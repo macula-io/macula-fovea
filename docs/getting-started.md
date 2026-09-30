@@ -96,7 +96,7 @@ fovea render security/fovea --json  # grid, coverage and open gaps for CI
 ## 6. Wire CI
 
 ```yaml
-- uses: macula-io/macula-fovea@<40-char sha of the release> # v0.1.0
+- uses: macula-io/macula-fovea@<40-char sha of the release> # v0.2.0
   with: { dir: security/fovea, command: lint }
 ```
 

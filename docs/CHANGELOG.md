@@ -7,7 +7,15 @@ Two version lines live in this repository and are kept apart:
 - **Spec** versions (`spec/vX.Y/`): declared by an assessment header as
   `fovea: "X.Y"`. A tool release says which spec versions it reads.
 
-## Unreleased: spec 0.5 (2026-09-30), read by `main`
+## Tool 0.2.0 (2026-09-30), reads spec 0.2 to 0.5
+
+Reads spec 0.4 and 0.5 (below), and adds `fovea verify`: the offline
+verifier of a signed claim observation, and with `--chain` the continuity
+check of a kept history of them. Install with
+`go install github.com/macula-io/macula-fovea/cli/cmd/fovea@v0.2.0` (the Go
+module's tag is `cli/v0.2.0`), or pin the Action by the release's sha.
+
+### Spec 0.5 (2026-09-30)
 
 Spec v0.5 lets a kept history of observations be checked for continuity. It
 changes only the observation record; an assessment reads exactly as in v0.4,
@@ -30,7 +38,7 @@ and a header may declare 0.4 or 0.5.
   realm member endorsement and the assessment revision, read from the git
   history of `--ref`.
 
-## Unreleased: spec 0.4 (2026-09-29), read by `main`
+### Spec 0.4 (2026-09-29)
 
 Spec v0.4 lets a claim be re-checked, not only written.
 
@@ -59,8 +67,8 @@ Spec v0.4 lets a claim be re-checked, not only written.
   does not prove.
 - 19 new lint rules, each with its case; v0.2 and v0.3 assessments refuse
   the new fields (`field_needs_v0_4`) rather than ignore them.
-- The Cucumber report cross-check and `pct_executable_evidence` wait for
-  v0.5; the check, if it lands, is `fovea check-evidence`, since `fovea
+- The Cucumber report cross-check and `pct_executable_evidence` wait for a
+  later spec version; the check, if it lands, is `fovea check-evidence`, since `fovea
   verify` checks signed observations.
 
 ## Tool 0.1.0 (2026-09-26), reads spec 0.2 and 0.3

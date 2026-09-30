@@ -73,7 +73,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: macula-io/macula-fovea@<40-char sha of the release> # v0.1.0
+      - uses: macula-io/macula-fovea@<40-char sha of the release> # v0.2.0
         with: { dir: security/fovea, command: issues, args: --check }
         env: { GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
 
@@ -83,7 +83,7 @@ jobs:
     permissions: { contents: read, issues: write }   # ← required
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: macula-io/macula-fovea@<40-char sha of the release> # v0.1.0
+      - uses: macula-io/macula-fovea@<40-char sha of the release> # v0.2.0
         with: { dir: security/fovea, command: issues }
         env: { GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
 ```
