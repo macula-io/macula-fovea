@@ -152,3 +152,98 @@ func TestVerifyCommand(t *testing.T) {
 		t.Fatalf("no flags: rc %d, want 2", rc)
 	}
 }
+
+// A v0.5 record carries its place in its slot's chain; the per-record steps
+// check seq and prev agree and that it declares the header's publish policy.
+func TestV05RecordsCarryTheirPlaceInTheChain(t *testing.T) {
+	repo := fixtureRepo(t)
+	v, refusal := VerifyObservation(input(t, repo, "obs_v05", "endorsement"))
+	if refusal != nil || !v.Chained || v.Seq != 0 {
+		t.Fatalf("obs_v05: %+v, %v", v, refusal)
+	}
+	if v, _ := VerifyObservation(input(t, repo, "obs_holding", "endorsement")); v == nil || v.Chained {
+		t.Fatalf("a v0.4 record is in no chain: %+v", v)
+	}
+	for obs, step := range map[string]int{"s2_prev_at_seq0": 2, "s2_zero_prev_at_seq1": 2, "s9_publish_differs": 9} {
+		if _, refusal := VerifyObservation(input(t, repo, obs, "endorsement")); refusal == nil || refusal.Step != step {
+			t.Errorf("%s: %v, want step %d", obs, refusal, step)
+		}
+	}
+}
+
+func chainRecords(t *testing.T, name string) [][]byte {
+	t.Helper()
+	files, err := filepath.Glob(filepath.Join("testdata", "verify", "chain", name, "*.hex"))
+	if err != nil || len(files) == 0 {
+		t.Fatalf("chain %s: %v", name, err)
+	}
+	var out [][]byte
+	for _, f := range files {
+		b, err := ReadBytes(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		out = append(out, b)
+	}
+	return out
+}
+
+func chainInput(t *testing.T, repo string) ChainInput {
+	in := input(t, repo, "obs_holding", "endorsement")
+	return ChainInput{Endorsements: [][]byte{in.Endorsement}, RealmKey: in.RealmKey, RealmName: in.RealmName,
+		Profile: in.Profile, Assessment: in.Assessment, NowMs: in.NowMs}
+}
+
+// Each chain case of spec v0.5 section 15 is reported as exactly its finding.
+func TestChainFindings(t *testing.T) {
+	repo := fixtureRepo(t)
+	cases := map[string]func(ChainReport) bool{
+		"continuous":      func(r ChainReport) bool { return r.Continuous && r.Accepted == 5 && r.FirstSeq == 0 && r.LastSeq == 4 },
+		"c1_gap":          func(r ChainReport) bool { return !r.Continuous && len(r.C1) == 1 && r.C1[0] == 2 },
+		"c2_fork":         func(r ChainReport) bool { return !r.Continuous && len(r.C2) > 0 },
+		"c3_seq_skips":    func(r ChainReport) bool { return !r.Continuous && len(r.C3) == 1 && r.C3[0] == 3 },
+		"c4_out_of_order": func(r ChainReport) bool { return !r.Continuous && len(r.C4) == 1 && r.C4[0] == 2 },
+		"c5_late":         func(r ChainReport) bool { return !r.Continuous && len(r.C5) == 1 && r.C5[0] == 2 },
+		"c6_restart":      func(r ChainReport) bool { return !r.Continuous && r.C6 == 1 },
+		"c7_signed_late":  func(r ChainReport) bool { return !r.Continuous && len(r.C7) == 1 && r.C7[0] == 1 },
+	}
+	for name, want := range cases {
+		t.Run(name, func(t *testing.T) {
+			r, err := VerifyChain(chainInput(t, repo), chainRecords(t, name))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !want(r) {
+				t.Fatalf("%+v", r)
+			}
+			clean := len(r.C1)+len(r.C2)+len(r.C3)+len(r.C4)+len(r.C5)+r.C6+len(r.C7) == 0
+			if clean != (name == "continuous") {
+				t.Fatalf("findings beyond the case's own: %+v", r)
+			}
+		})
+	}
+}
+
+func TestAChainIsOneSlot(t *testing.T) {
+	if _, err := VerifyChain(chainInput(t, fixtureRepo(t)), chainRecords(t, "two_slots")); err == nil {
+		t.Fatal("records of two signers taken as one chain")
+	}
+}
+
+func TestVerifyChainCommand(t *testing.T) {
+	repo := fixtureRepo(t)
+	file := func(n string) string { return filepath.Join("testdata", "verify", n+".hex") }
+	args := func(dir string) []string {
+		return []string{"--realm-key", file("realm_key"), "--realm", fixtureRealm, "--profile", "pq_hybrid",
+			"--endorsement", file("endorsement"), "--repo", repo, "--path", "fixture-kx",
+			"--chain", filepath.Join("testdata", "verify", "chain", dir)}
+	}
+	var out, errOut bytes.Buffer
+	if rc := RunVerify(args("continuous"), &out, &errOut); rc != 0 || !strings.Contains(out.String(), "continuous: 5 records, seq 0 to 4") {
+		t.Fatalf("rc %d, stdout %q, stderr %q", rc, out.String(), errOut.String())
+	}
+	out.Reset()
+	if rc := RunVerify(args("c1_gap"), &out, &errOut); rc != 1 || !strings.Contains(out.String(), "C1 gap: seq 2") {
+		t.Fatalf("rc %d, stdout %q", rc, out.String())
+	}
+}

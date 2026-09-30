@@ -45,7 +45,13 @@ var payloadKeys = map[string]cbor.Kind{
 	"publish": cbor.KindUInt, "observed_at": cbor.KindUInt,
 }
 
+// chainKeys are the keys a v0.5 record adds (15-observations, "The chain"):
+// a record carries both or neither.
+var chainKeys = map[string]cbor.Kind{"seq": cbor.KindUInt, "prev": cbor.KindBytes}
+
 var stateNames = []string{"holding", "broken", "unknown"}
+
+var publishNames = []string{"every_result", "state_changes"}
 
 // judgements is 16-probes' judgement of a round, by probe and version: the
 // state a round's outcomes give against its expectation (0 accepted, 1
@@ -90,13 +96,22 @@ type VerifyInput struct {
 	NowMs       int64
 }
 
-// Verified is an accepted observation, as its record states it.
+// Verified is an accepted observation, as its record states it. Chained is
+// true for a v0.5 record, which carries Seq and Prev; Key and Subject name
+// its slot, and WireHash is the SHA-256 of its wire bytes, what the next
+// record's prev names.
 type Verified struct {
 	System, ClaimID, TargetAddress, State string
 	Observer                              [32]byte
 	CreatedAt, ObservedAt                 uint64
 	AssessmentSHA                         []byte
 	Outcomes                              map[string]uint64
+	Chained                               bool
+	Seq                                   uint64
+	Prev                                  []byte
+	Key, Subject                          []byte
+	WireHash                              [32]byte
+	revision                              *Header
 }
 
 // Refusal names the first verification step that failed, and why.
@@ -209,7 +224,8 @@ func VerifyObservation(in VerifyInput) (*Verified, *Refusal) {
 	return &Verified{
 		System: p.system, ClaimID: p.claimID, TargetAddress: p.targetAddress, State: stateNames[p.state],
 		Observer: observer, CreatedAt: created, ObservedAt: p.observedAt, AssessmentSHA: p.assessmentSHA,
-		Outcomes: p.outcomes,
+		Outcomes: p.outcomes, Chained: p.chained, Seq: p.seq, Prev: p.prev, Key: obs.Key, Subject: obs.Subject,
+		WireHash: sha256.Sum256(in.Observation), revision: h,
 	}, nil
 }
 
@@ -242,6 +258,9 @@ type payload struct {
 	realmID, stationNode, assessmentSHA      []byte
 	state, probeVersion, publish, observedAt uint64
 	expected, outcomes                       map[string]uint64
+	chained                                  bool
+	seq                                      uint64
+	prev                                     []byte
 }
 
 // readPayload is step 2: exactly spec 15's keys, each once and of its kind,
@@ -258,6 +277,9 @@ func readPayload(r record.Record) (payload, string) {
 			return payload{}, fmt.Sprintf("payload key %q twice", k)
 		}
 		kind, known := payloadKeys[k]
+		if chainKind, chain := chainKeys[k]; chain {
+			kind, known = chainKind, true
+		}
 		if !known {
 			return payload{}, fmt.Sprintf("payload key %q is not spec 15's", k)
 		}
@@ -271,6 +293,9 @@ func readPayload(r record.Record) (payload, string) {
 			return payload{}, fmt.Sprintf("payload key %q is missing", k)
 		}
 	}
+	if hasKey(fields, "seq") != hasKey(fields, "prev") {
+		return payload{}, "a payload with one of seq and prev, not both"
+	}
 	text := func(k string) string { s, _ := fields[k].AsText(); return s }
 	raw := func(k string) []byte { b, _ := fields[k].AsBytes(); return b }
 	num := func(k string) uint64 { n, _ := fields[k].AsInt64(); return uint64(n) }
@@ -278,6 +303,7 @@ func readPayload(r record.Record) (payload, string) {
 		system: text("system"), claimID: text("claim_id"), probe: text("probe"), targetAddress: text("target_address"),
 		realmID: raw("realm_id"), stationNode: raw("station_node"), assessmentSHA: raw("assessment_sha"),
 		state: num("state"), probeVersion: num("probe_version"), publish: num("publish"), observedAt: num("observed_at"),
+		chained: hasKey(fields, "seq"), seq: num("seq"), prev: raw("prev"),
 	}
 	var reason string
 	if p.expected, reason = groups(fields["expected"], "expected", 1); reason != "" {
@@ -299,6 +325,10 @@ func readPayload(r record.Record) (payload, string) {
 		return payload{}, fmt.Sprintf("publish %d is not 0 or 1", p.publish)
 	case p.observedAt > r.CreatedAt:
 		return payload{}, "observed_at is after created_at"
+	case p.chained && len(p.prev) != 32:
+		return payload{}, "prev is not 32 bytes"
+	case p.chained && (p.seq == 0) != bytes.Equal(p.prev, make([]byte, 32)):
+		return payload{}, "prev is 32 zero bytes other than exactly at seq 0"
 	}
 	subject := p.system + "\x00" + p.claimID + "\x00" + p.targetAddress
 	if !bytes.Equal(r.Subject, []byte(subject)) {
@@ -356,6 +386,9 @@ func sameKeys(a, b map[string]uint64) bool {
 func declared(h *Header, cells map[string]*Cell, p payload) string {
 	if h.System != p.system {
 		return fmt.Sprintf("the revision's system is %q, not %q", h.System, p.system)
+	}
+	if p.chained && h.Policy.Publish != publishNames[p.publish] {
+		return fmt.Sprintf("the revision's policy.publish is %q, not %q", h.Policy.Publish, publishNames[p.publish])
 	}
 	var found []Evidence
 	for _, id := range sortedIDs(cells) {
@@ -529,21 +562,27 @@ func isHex(s string) bool {
 // ---- the command ----
 
 const verifyUsage = `fovea verify [flags] <observation>
+fovea verify [flags] --chain <dir>
 
-verifies a claim observation offline (spec v0.4, 15-observations): accepted
-only if all nine steps hold at the observation's created_at. Files hold
-bytes as hex or raw.
+verifies a claim observation offline (spec v0.5, 15-observations): accepted
+only if all nine steps hold at the observation's created_at. With --chain,
+verifies every record in dir (*.hex, one slot) and reports the set's
+continuity: gaps, forks, broken links, out-of-order, late and late-signed
+records, and restarts. Files hold bytes as hex or raw.
 
-flags (required but --ref):
+flags (required but --ref and --chain):
   --realm-key f     the realm's public key as carried
   --realm name      the realm's name (its realm id is SHA-256 of it)
   --profile p       pq_hybrid or pq_pure
-  --endorsement f   the observer's realm member endorsement record
+  --endorsement f   the observer's realm member endorsement record; repeat it
+                    to give several (a record is accepted with any that admits it)
   --repo dir        a git repository holding the assessment revision
   --path dir        the assessment's directory inside that repository
   --ref r           the ref whose history must hold that revision (default HEAD)
+  --chain dir       the kept records of one slot, instead of one observation
 
-exit 0 accepted, 1 refused (the first failing step is named), 2 usage.`
+exit 0 accepted (with --chain: continuous), 1 refused or not continuous,
+2 usage.`
 
 // RunVerify is the verify command: args exclude the command name.
 func RunVerify(args []string, stdout, stderr io.Writer) int {
@@ -552,7 +591,7 @@ func RunVerify(args []string, stdout, stderr io.Writer) int {
 		return 0
 	}
 	flags := map[string]string{}
-	var files []string
+	var files, endorsementFiles []string
 	for i := 0; i < len(args); i++ {
 		a := args[i]
 		name, value, hasValue := strings.Cut(a, "=")
@@ -568,7 +607,9 @@ func RunVerify(args []string, stdout, stderr io.Writer) int {
 			return 2
 		}
 		switch name {
-		case "--realm-key", "--realm", "--profile", "--endorsement", "--repo", "--path", "--ref":
+		case "--endorsement":
+			endorsementFiles = append(endorsementFiles, value)
+		case "--realm-key", "--realm", "--profile", "--repo", "--path", "--ref", "--chain":
 			flags[name] = value
 		default:
 			fmt.Fprintf(stderr, "fovea verify: unknown flag %s\n\n%s\n", name, verifyUsage)
@@ -576,13 +617,17 @@ func RunVerify(args []string, stdout, stderr io.Writer) int {
 		}
 	}
 	missing := []string{}
-	for _, f := range []string{"--realm-key", "--realm", "--profile", "--endorsement", "--repo", "--path"} {
+	for _, f := range []string{"--realm-key", "--realm", "--profile", "--repo", "--path"} {
 		if flags[f] == "" {
 			missing = append(missing, f)
 		}
 	}
-	if len(files) != 1 || len(missing) > 0 {
-		fmt.Fprintf(stderr, "fovea verify: needs one observation and %s\n\n%s\n", strings.Join(missing, " "), verifyUsage)
+	if len(endorsementFiles) == 0 {
+		missing = append(missing, "--endorsement")
+	}
+	chain := flags["--chain"]
+	if (chain == "") != (len(files) == 1) || (chain != "" && len(files) > 0) || len(missing) > 0 {
+		fmt.Fprintf(stderr, "fovea verify: needs one observation or --chain, and %s\n\n%s\n", strings.Join(missing, " "), verifyUsage)
 		return 2
 	}
 	p, err := profile.Parse(flags["--profile"])
@@ -594,18 +639,31 @@ func RunVerify(args []string, stdout, stderr io.Writer) int {
 	if ref == "" {
 		ref = "HEAD"
 	}
-	in := VerifyInput{RealmName: flags["--realm"], Profile: p, NowMs: time.Now().UnixMilli(),
-		Assessment: GitRevision(flags["--repo"], ref, flags["--path"])}
-	for _, r := range []struct {
-		file string
-		into *[]byte
-	}{{files[0], &in.Observation}, {flags["--endorsement"], &in.Endorsement}, {flags["--realm-key"], &in.RealmKey}} {
-		if *r.into, err = ReadBytes(r.file); err != nil {
+	realmKey, err := ReadBytes(flags["--realm-key"])
+	if err != nil {
+		fmt.Fprintf(stderr, "fovea verify: %v\n", err)
+		return 2
+	}
+	var endorsements [][]byte
+	for _, f := range endorsementFiles {
+		e, err := ReadBytes(f)
+		if err != nil {
 			fmt.Fprintf(stderr, "fovea verify: %v\n", err)
 			return 2
 		}
+		endorsements = append(endorsements, e)
 	}
-	v, refusal := VerifyObservation(in)
+	in := ChainInput{Endorsements: endorsements, RealmKey: realmKey, RealmName: flags["--realm"], Profile: p,
+		Assessment: GitRevision(flags["--repo"], ref, flags["--path"]), NowMs: time.Now().UnixMilli()}
+	if chain != "" {
+		return runChain(in, chain, stdout, stderr)
+	}
+	observation, err := ReadBytes(files[0])
+	if err != nil {
+		fmt.Fprintf(stderr, "fovea verify: %v\n", err)
+		return 2
+	}
+	v, refusal := verifyWithAny(in, observation)
 	if refusal != nil {
 		fmt.Fprintf(stderr, "fovea verify: %v\n", refusal)
 		return 1
@@ -615,6 +673,9 @@ func RunVerify(args []string, stdout, stderr io.Writer) int {
 	fmt.Fprintf(stdout, "  observer    %x\n", v.Observer)
 	fmt.Fprintf(stdout, "  assessment  %x, in the history of %s\n", v.AssessmentSHA, ref)
 	fmt.Fprintf(stdout, "  observed    %s, signed %s\n", ms(v.ObservedAt), ms(v.CreatedAt))
+	if v.Chained {
+		fmt.Fprintf(stdout, "  chain       seq %d, prev %x\n", v.Seq, v.Prev)
+	}
 	gs := make([]string, 0, len(v.Outcomes))
 	for g := range v.Outcomes {
 		gs = append(gs, g)
@@ -624,4 +685,64 @@ func RunVerify(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stdout, "  %-20s %s\n", g, []string{"accepted", "refused", "inconclusive"}[v.Outcomes[g]])
 	}
 	return 0
+}
+
+// runChain verifies the *.hex records in dir as one slot's kept set.
+func runChain(in ChainInput, dir string, stdout, stderr io.Writer) int {
+	files, err := filepath.Glob(filepath.Join(dir, "*.hex"))
+	if err != nil || len(files) == 0 {
+		fmt.Fprintf(stderr, "fovea verify: no *.hex records in %s\n", dir)
+		return 2
+	}
+	sort.Strings(files)
+	var records [][]byte
+	for _, f := range files {
+		b, err := ReadBytes(f)
+		if err != nil {
+			fmt.Fprintf(stderr, "fovea verify: %v\n", err)
+			return 2
+		}
+		records = append(records, b)
+	}
+	r, err := VerifyChain(in, records)
+	if err != nil {
+		fmt.Fprintf(stderr, "fovea verify: %v\n", err)
+		return 1
+	}
+	verdict := "not continuous"
+	if r.Continuous {
+		verdict = "continuous"
+	}
+	fmt.Fprintf(stdout, "%s: %d records, seq %d to %d, observed %s to %s\n", verdict, r.Accepted-r.Unchained,
+		r.FirstSeq, r.LastSeq, ms(r.FirstObserved), ms(r.LastObserved))
+	fmt.Fprintf(stdout, "  files %d, accepted %d, refused %d, unchained (v0.4) %d\n", r.Records, r.Accepted, len(r.Refused), r.Unchained)
+	for _, refusal := range r.Refused {
+		fmt.Fprintf(stdout, "  refused: %v\n", refusal)
+	}
+	for _, f := range []struct {
+		name string
+		seqs []uint64
+	}{{"C1 gap", r.C1}, {"C2 fork", r.C2}, {"C3 broken link", r.C3}, {"C4 out of order", r.C4}, {"C5 late", r.C5}, {"C7 signed late", r.C7}} {
+		if len(f.seqs) > 0 {
+			fmt.Fprintf(stdout, "  %s: seq %s\n", f.name, joinSeqs(f.seqs))
+		}
+	}
+	for _, hole := range r.Holes {
+		fmt.Fprintf(stdout, "  C6 restart: %s\n", hole)
+	}
+	if r.NotEveryResult {
+		fmt.Fprintln(stdout, "  a revision's policy.publish is not every_result: continuity is not claimed")
+	}
+	if !r.Continuous {
+		return 1
+	}
+	return 0
+}
+
+func joinSeqs(seqs []uint64) string {
+	out := make([]string, len(seqs))
+	for i, s := range seqs {
+		out[i] = fmt.Sprint(s)
+	}
+	return strings.Join(out, ", ")
 }

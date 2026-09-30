@@ -58,13 +58,67 @@ main([Out]) ->
     write(Out, "s9_unknown_sha", observation(Holding#{<<"assessment_sha">> => <<16#fe:160>>}, A)),
     write(Out, "s9_other_system", observation(16#23, Holding#{<<"system">> => {text, <<"fixture-other">>}},
                                               <<"fixture-other", 0, ?CLAIM/binary, 0, ?ADDRESS/binary>>, A)),
+    Zero = <<0:256>>,
+    write(Out, "obs_v05", observation(Holding#{<<"seq">> => 0, <<"prev">> => Zero}, A)),
+    write(Out, "s2_prev_at_seq0", observation(Holding#{<<"seq">> => 0, <<"prev">> => <<1:256>>}, A)),
+    write(Out, "s2_zero_prev_at_seq1", observation(Holding#{<<"seq">> => 1, <<"prev">> => Zero}, A)),
+    write(Out, "s9_publish_differs", observation(Holding#{<<"seq">> => 0, <<"prev">> => Zero, <<"publish">> => 1}, A)),
+    chains(filename:join(Out, "chain"), Holding, A, B, Now),
     ok = file:write_file(filename:join(Out, "assessment_sha"), [binary:encode_hex(Sha, lowercase), $\n]),
     io:format("observer ~s~n", [binary:encode_hex(NodeA, lowercase)]).
+
+%% Chained v0.5 records of one slot, each case a directory of NN.hex files.
+%% Rounds are an hour apart (the fixture's cadence), ending an hour ago, each
+%% signed a second after its round.
+-define(HOUR, 3600000).
+chains(Dir, Holding, A, B, Now) ->
+    Base = Now - 8 * ?HOUR,
+    Ok = chain(Holding, A, [{I, Base + I * ?HOUR, 1000} || I <- lists:seq(0, 4)]),
+    cases(Dir, "continuous", Ok),
+    cases(Dir, "c1_gap", [R || {S, _} = R <- Ok, S =/= 2]),
+    {_, W1} = lists:keyfind(1, 1, Ok),
+    Fork = link(Holding, A, 2, crypto:hash(sha256, W1), Base + 2 * ?HOUR + 60000, 1000),
+    cases(Dir, "c2_fork", Ok ++ [{21, Fork}]),
+    Skip = link(Holding, A, 3, crypto:hash(sha256, W1), Base + 2 * ?HOUR, 1000),
+    cases(Dir, "c3_seq_skips", [R || {S, _} = R <- Ok, S < 2] ++ [{3, Skip}]),
+    Early = chain(Holding, A, [{0, Base, 1000}, {1, Base + ?HOUR, 1000}]),
+    {_, E1} = lists:keyfind(1, 1, Early),
+    Back = link(Holding, A, 2, crypto:hash(sha256, E1), Base + ?HOUR div 2, 1000),
+    cases(Dir, "c4_out_of_order", Early ++ [{2, Back}]),
+    cases(Dir, "c5_late", chain(Holding, A, [{0, Base, 1000}, {1, Base + ?HOUR, 1000}, {2, Base + 3 * ?HOUR, 1000}])),
+    Old = chain(Holding, A, [{0, Base, 1000}, {1, Base + ?HOUR, 1000}]),
+    New = chain(Holding, A, [{0, Base + 4 * ?HOUR, 1000}, {1, Base + 5 * ?HOUR, 1000}]),
+    cases(Dir, "c6_restart", [{S, W} || {S, W} <- Old] ++ [{10 + S, W} || {S, W} <- New]),
+    cases(Dir, "c7_signed_late", chain(Holding, A, [{0, Base, 1000}, {1, Base + ?HOUR, 10 * 60000}, {2, Base + 2 * ?HOUR, 1000}])),
+    cases(Dir, "two_slots", [lists:keyfind(0, 1, Ok), {1, element(2, hd(chain(Holding, B, [{0, Base, 1000}])))}]).
+
+%% A chain from seq 0: each {Seq, ObservedAt, SignedAfterMs} links to the one before.
+chain(Holding, Key, Rounds) ->
+    {Links, _} = lists:mapfoldl(fun({Seq, Observed, After}, Prev) ->
+                                        Wire = link(Holding, Key, Seq, Prev, Observed, After),
+                                        {{Seq, Wire}, crypto:hash(sha256, Wire)}
+                                end, <<0:256>>, Rounds),
+    Links.
+
+link(Holding, Key, Seq, Prev, Observed, After) ->
+    Payload = Holding#{<<"seq">> => Seq, <<"prev">> => Prev, <<"observed_at">> => Observed},
+    Record = macula_record:envelope(16#23, maps:from_list([{{text, K}, V} || K := V <- Payload]),
+                                    #{subject_id => subject(), ttl_ms => 7 * ?DAY}),
+    Created = Observed + After,
+    macula_record:encode(macula_record:sign(Record#{created_at => Created, expires_at => Created + 7 * ?DAY}, Key)).
+
+cases(Dir, Name, Links) ->
+    Case = filename:join(Dir, Name),
+    ok = filelib:ensure_path(Case),
+    [ok = file:write_file(filename:join(Case, io_lib:format("~2..0B.hex", [N])), [binary:encode_hex(W, lowercase), $\n])
+     || {N, W} <- Links],
+    ok.
 
 endorsement(Key, RealmId, Member, From, Until) ->
     Unsigned = macula_record:realm_member_endorsement(RealmId, #{realm => RealmId, member_node => Member, roles => [<<"peer">>]},
                                                       #{valid_from => From, valid_until => Until, ttl_ms => 30 * ?DAY}),
-    macula_record:encode(macula_record:sign(Unsigned, Key)).
+    %% Created when its window opens, so it covers records dated before now.
+    macula_record:encode(macula_record:sign(Unsigned#{created_at => From, expires_at => From + 30 * ?DAY}, Key)).
 
 subject() -> <<?SYSTEM/binary, 0, ?CLAIM/binary, 0, ?ADDRESS/binary>>.
 
