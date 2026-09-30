@@ -26,7 +26,7 @@ best study material after the docs:
 Read their `fovea.yaml` (scope discipline), `trust-anchors.md` (what counts
 as an anchor), and the `roadmap` cells (how gaps are recorded honestly).
 
-The normative contract is not in these docs; it is in [`spec/v0.4/`](../spec/v0.4/00-overview.md).
+The normative contract is not in these docs; it is in [`spec/v0.5/`](../spec/v0.5/00-overview.md).
 These docs explain how to run the spec; the spec explains what the rules are;
 the `fovea` CLI's `lint` is the reference implementation that enforces them
 (one test case per rule under `cli/internal/core/testdata/`).

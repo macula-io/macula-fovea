@@ -13,7 +13,11 @@ import (
 
 // readsAsV03 is true for the versions whose scorecard is v0.3's: v0.4 adds no
 // scorecard rule.
-func readsAsV03(h *Header) bool { return h.Fovea == "0.3" || h.Fovea == "0.4" }
+func readsAsV03(h *Header) bool { return h.Fovea == "0.3" || readsAsV04(h) }
+
+// readsAsV04 is true for the versions whose assessment format is v0.4's: v0.5
+// changes only the observation record (15-observations).
+func readsAsV04(h *Header) bool { return h.Fovea == "0.4" || h.Fovea == "0.5" }
 
 var evidenceKinds = map[string]bool{"doc": true, "test": true, "scenario": true, "probe": true}
 
@@ -64,7 +68,7 @@ var isoDuration = regexp.MustCompile(`^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:
 // lintV04 runs the v0.4 rules on a v0.4 assessment, and on an older one
 // refuses the v0.4 fields it would otherwise silently ignore.
 func lintV04(h *Header, cells map[string]*Cell) []Finding {
-	if h.Fovea != "0.4" {
+	if !readsAsV04(h) {
 		return lintFieldsBeforeV04(h, cells)
 	}
 	var f []Finding

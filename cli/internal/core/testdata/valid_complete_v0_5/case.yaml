@@ -1,0 +1,5 @@
+describes: "The complete v0.4 assessment declared as 0.5: v0.5 changes only the observation record (15-observations), so a 0.5 header reads exactly as 0.4."
+base: valid_complete
+remove: []
+expect:
+  errors: []

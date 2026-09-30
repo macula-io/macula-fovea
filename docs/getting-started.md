@@ -1,7 +1,7 @@
 # Getting started — zero to a lint-clean grid
 
 Ten minutes, one service. This walks the exact command sequence; the
-normative rules it obeys live in [`spec/v0.4/`](../spec/v0.4/00-overview.md).
+normative rules it obeys live in [`spec/v0.5/`](../spec/v0.5/00-overview.md).
 
 ## 0. Build the CLI
 
@@ -45,7 +45,7 @@ cells_dir: cells/
 Write `trust-anchors.md` (the keys, CAs, pipelines whose compromise breaks
 everything) and `landscape.md` (a diagram; every column must name something
 on it and everything on it must be under some column) — see
-[spec 14](../spec/v0.4/14-instantiation.md). A header needs `targets` and a
+[spec 14](../spec/v0.5/14-instantiation.md). A header needs `targets` and a
 `policy` only once a cell declares a probe (spec 14, 16).
 
 ## 2. Generate the grid

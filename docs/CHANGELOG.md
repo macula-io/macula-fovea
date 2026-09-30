@@ -7,6 +7,27 @@ Two version lines live in this repository and are kept apart:
 - **Spec** versions (`spec/vX.Y/`): declared by an assessment header as
   `fovea: "X.Y"`. A tool release says which spec versions it reads.
 
+## Unreleased: spec 0.5 (2026-09-30), read by `main`
+
+Spec v0.5 lets a kept history of observations be checked for continuity. It
+changes only the observation record; an assessment reads exactly as in v0.4,
+and a header may declare 0.4 or 0.5.
+
+- **Chained observations** (15-observations): each record carries `seq` and
+  `prev` (SHA-256 of the previous record's wire bytes), per observer, claim
+  and station. The observer keeps its place across restarts; a lost place is
+  a visible restart. A verifier given a kept set reports gaps, forks, broken
+  links, out-of-order and late records, and restarts; a set is continuous only
+  under `policy.publish: every_result`.
+- **Keeping a history** (informative): a keeper fetches each slot more often
+  than the cadence; a keeper publishing every 15 minutes makes a `broken`
+  claim public within about 15 minutes.
+- The lint reads a 0.5 header as 0.4 (`valid_complete_v0_5`).
+- **`fovea verify`** (added 2026-09-29, spec v0.4 records): the nine offline
+  verification steps of 15-observations against the realm key, the observer's
+  realm member endorsement and the assessment revision, read from the git
+  history of `--ref`.
+
 ## Unreleased: spec 0.4 (2026-09-29), read by `main`
 
 Spec v0.4 lets a claim be re-checked, not only written.

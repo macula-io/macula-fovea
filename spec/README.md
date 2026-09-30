@@ -13,7 +13,7 @@ changes:
 
 Editorial fixes (typos, clarifying examples) do not require a version bump.
 
-Current version: [v0.4](v0.4/00-overview.md).
+Current version: [v0.5](v0.5/00-overview.md).
 
 The reference implementation is the `fovea` CLI in [`cli/`](../cli/): its
 `lint` is what "the lint" means wherever the spec says it. Each rule it

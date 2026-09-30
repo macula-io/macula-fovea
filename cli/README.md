@@ -1,10 +1,11 @@
 # fovea (CLI)
 
 Single static Go binary implementing the fovea spec
-([v0.4](../spec/v0.4/00-overview.md), and the archival
-[v0.3](../spec/v0.3/00-overview.md) and [v0.2](../spec/v0.2/00-overview.md);
-all three share the grid and cell rules, v0.3 changes only the scorecard,
-v0.4 adds evidence, probe declarations, targets and a publication policy) against an **assessment directory** (header +
+([v0.5](../spec/v0.5/00-overview.md), and the archival
+[v0.4](../spec/v0.4/00-overview.md), [v0.3](../spec/v0.3/00-overview.md) and [v0.2](../spec/v0.2/00-overview.md);
+all four share the grid and cell rules, v0.3 changes only the scorecard,
+v0.4 adds evidence, probe declarations, targets and a publication policy,
+v0.5 changes only the observation record: chained observations) against an **assessment directory** (header +
 cells). It is the reference implementation of the spec: where the spec says
 "the lint", it means this `lint`.
 
