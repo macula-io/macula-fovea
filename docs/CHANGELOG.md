@@ -7,7 +7,10 @@ Two version lines live in this repository and are kept apart:
 - **Spec** versions (`spec/vX.Y/`): declared by an assessment header as
   `fovea: "X.Y"`. A tool release says which spec versions it reads.
 
-## Unreleased
+## Tool 0.3.0 (2026-09-30), reads spec 0.2 to 0.5
+
+Install with `go install github.com/macula-io/macula-fovea/cli/cmd/fovea@v0.3.0`
+(module tag `cli/v0.3.0`).
 
 - **`fovea verify --json`**, for one record and with `--chain`: the same
   verdict as JSON on stdout (per record: slot, signer key id, observer, claim,
