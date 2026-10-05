@@ -7,7 +7,10 @@ Two version lines live in this repository and are kept apart:
 - **Spec** versions (`spec/vX.Y/`): declared by an assessment header as
   `fovea: "X.Y"`. A tool release says which spec versions it reads.
 
-## Unreleased
+## Tool 0.4.0 (2026-10-06), reads spec 0.2 to 0.6
+
+Install with `go install github.com/macula-io/macula-fovea/cli/cmd/fovea@v0.4.0`
+(module tag `cli/v0.4.0`).
 
 - **Spec v0.6**: a second probe, `station_release` version 1 (16-probes). A
   station's signed endpoint record names the release it runs; the claim holds
