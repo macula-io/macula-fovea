@@ -1,7 +1,8 @@
 // Package core implements fovea's model, lint rules, scorecard and grid init
-// for spec v0.2, v0.3, v0.4 and v0.5 (identical grid and cell rules; v0.3 changes
-// only the scorecard, v0.4 adds evidence, probe declarations, targets and a
-// publication policy, lint_v04.go). Spec-normative rules are cited where
+// for spec v0.2 to v0.6 (identical grid and cell rules; v0.3 changes only the
+// scorecard, v0.4 adds evidence, probe declarations, targets and a
+// publication policy, lint_v04.go; v0.5 chains observations, v0.6 registers a
+// second probe). Spec-normative rules are cited where
 // enforced.
 package core
 
@@ -124,7 +125,7 @@ var families = []string{"actors", "lifecycle", "data", "environment"}
 // knownVersions: spec versions this CLI can render and lint. Assessments
 // declare their version in the header; older headers keep their exact
 // reading (spec/README: versions are forked, not branched).
-var knownVersions = map[string]bool{"0.2": true, "0.3": true, "0.4": true, "0.5": true}
+var knownVersions = map[string]bool{"0.2": true, "0.3": true, "0.4": true, "0.5": true, "0.6": true}
 
 // SpecVersions lists the spec versions this build reads, ascending.
 func SpecVersions() []string {
@@ -208,7 +209,7 @@ func LoadHeader(dir string) (*Header, []Finding, error) {
 	}
 	var f []Finding
 	if h.Fovea == "" || !knownVersions[h.Fovea] {
-		f = append(f, errf(ruleHeaderVersionUnknown, "fovea.yaml", "fovea must be a known spec version (0.2, 0.3, 0.4, 0.5), got %q", h.Fovea))
+		f = append(f, errf(ruleHeaderVersionUnknown, "fovea.yaml", "fovea must be a known spec version (0.2, 0.3, 0.4, 0.5, 0.6), got %q", h.Fovea))
 	}
 	if unassigned(h.Owner) {
 		f = append(f, errf(ruleHeaderOwnerUnassigned, "fovea.yaml", "owner is unassigned"))

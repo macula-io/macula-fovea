@@ -57,7 +57,8 @@ var publishNames = []string{"every_result", "state_changes"}
 // state a round's outcomes give against its expectation (0 accepted, 1
 // refused, 2 inconclusive; 0 holding, 1 broken, 2 unknown).
 var judgements = map[string]map[int]func(expected, outcomes map[string]uint64) uint64{
-	"kx_group": {1: judgeKxGroup},
+	"kx_group":        {1: judgeKxGroup},
+	"station_release": {1: judgeStationRelease},
 }
 
 // judgeKxGroup is kx_group v1: broken when a group expected refused was
@@ -75,6 +76,17 @@ func judgeKxGroup(expected, outcomes map[string]uint64) uint64 {
 	}
 	if asExpected && anyAccepted {
 		return 0
+	}
+	return 2
+}
+
+// judgeStationRelease is station_release v1: its one entry, signed_release,
+// is judged by its outcome alone: accepted holding, refused broken,
+// inconclusive unknown. A refusal can break it because both of its sides are
+// authenticated (16-probes).
+func judgeStationRelease(_, outcomes map[string]uint64) uint64 {
+	if got, ok := outcomes["signed_release"]; ok {
+		return got
 	}
 	return 2
 }
@@ -419,8 +431,8 @@ func declared(h *Header, cells map[string]*Cell, p payload) string {
 	if d.Probe != p.probe || uint64(d.Version) != p.probeVersion {
 		return fmt.Sprintf("claim %s is declared as %s version %d, not %s version %d", p.claimID, d.Probe, d.Version, p.probe, p.probeVersion)
 	}
-	if _, known := probeRegistry[d.Probe][d.Version]; !known {
-		return fmt.Sprintf("probe %s version %d is not in this verifier's registry", d.Probe, d.Version)
+	if _, known := registered(d.Probe, d.Version, h.Fovea); !known {
+		return fmt.Sprintf("probe %s version %d is not in spec %s's registry", d.Probe, d.Version, h.Fovea)
 	}
 	want := map[string]uint64{}
 	for side, gs := range map[uint64][]string{0: d.Expect.Accepted, 1: d.Expect.Refused} {
@@ -576,7 +588,7 @@ func isHex(s string) bool {
 const verifyUsage = `fovea verify [flags] <observation>
 fovea verify [flags] --chain <dir>
 
-verifies a claim observation offline (spec v0.5, 15-observations): accepted
+verifies a claim observation offline (spec v0.6, 15-observations): accepted
 only if all nine steps hold at the observation's created_at. With --chain,
 verifies every record in dir (*.hex, one slot) and reports the set's
 continuity: gaps, forks, broken links, out-of-order, late and late-signed

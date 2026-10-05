@@ -16,8 +16,9 @@ import (
 func readsAsV03(h *Header) bool { return h.Fovea == "0.3" || readsAsV04(h) }
 
 // readsAsV04 is true for the versions whose assessment format is v0.4's: v0.5
-// changes only the observation record (15-observations).
-func readsAsV04(h *Header) bool { return h.Fovea == "0.4" || h.Fovea == "0.5" }
+// changes only the observation record (15-observations), v0.6 only the probe
+// registry (16-probes).
+func readsAsV04(h *Header) bool { return h.Fovea == "0.4" || h.Fovea == "0.5" || h.Fovea == "0.6" }
 
 var evidenceKinds = map[string]bool{"doc": true, "test": true, "scenario": true, "probe": true}
 
@@ -31,6 +32,7 @@ var scenarioRunners = map[string]bool{"godog": true, "whitebread": true, "cucumb
 type probeKind struct {
 	targetKind string
 	groups     []string // the expectation vocabulary
+	since      string   // the first spec version that may declare it
 }
 
 // probeRegistry is spec 16-probes: name, then version.
@@ -38,7 +40,26 @@ var probeRegistry = map[string]map[int]probeKind{
 	"kx_group": {1: {
 		targetKind: "macula_station",
 		groups:     []string{"secp384r1_mlkem1024", "secp256r1_mlkem768", "x25519", "secp256r1", "secp384r1"},
+		since:      "0.4",
 	}},
+	"station_release": {1: {
+		targetKind: "macula_station",
+		groups:     []string{"signed_release"},
+		since:      "0.6",
+	}},
+}
+
+// registered is the probe and version a header of spec version v may declare.
+func registered(probe string, version int, v string) (probeKind, bool) {
+	kind, known := probeRegistry[probe][version]
+	return kind, known && !olderSpec(v, kind.since)
+}
+
+// olderSpec is true when spec version a ("0.N") comes before b, read as
+// numbers, so 0.10 follows 0.9.
+func olderSpec(a, b string) bool {
+	minor := func(v string) int { n, _ := strconv.Atoi(strings.TrimPrefix(v, "0.")); return n }
+	return minor(a) < minor(b)
 }
 
 var targetKinds = map[string]bool{"macula_station": true}
@@ -179,9 +200,9 @@ func lintProbe(h *Header, id string, e Evidence) []Finding {
 	if !claimID.MatchString(e.Claim) {
 		f = append(f, errf(ruleClaimIDInvalid, id, "claim id %q is not a lowercase identifier", e.Claim))
 	}
-	kind, known := probeRegistry[e.Probe][e.Version]
+	kind, known := registered(e.Probe, e.Version, h.Fovea)
 	if !known {
-		return append(f, errf(ruleProbeUnknown, id, "probe %q version %d is not in the spec's registry", e.Probe, e.Version))
+		return append(f, errf(ruleProbeUnknown, id, "probe %q version %d is not in spec %s's registry", e.Probe, e.Version, h.Fovea))
 	}
 	// A target of an unknown kind is reported once, where it is declared
 	// (target_kind_unknown), not again at every probe that names it.

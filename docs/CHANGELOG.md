@@ -7,6 +7,20 @@ Two version lines live in this repository and are kept apart:
 - **Spec** versions (`spec/vX.Y/`): declared by an assessment header as
   `fovea: "X.Y"`. A tool release says which spec versions it reads.
 
+## Unreleased
+
+- **Spec v0.6**: a second probe, `station_release` version 1 (16-probes). A
+  station's signed endpoint record names the release it runs; the claim holds
+  when that release is a tag of the station's public image whose digest the
+  tag's own release build signed (Sigstore keyless). Unlike `kx_group`, a
+  refusal breaks it: both sides are authenticated. The assessment format and
+  the observation record are unchanged.
+- **lint** reads spec 0.6 and refuses `station_release` in a header before
+  0.6 (`probe_unknown`): the registry says from which spec version each probe
+  may be declared.
+- **verify** judges `station_release` records: `signed_release` accepted is
+  `holding`, refused `broken`, inconclusive `unknown`.
+
 ## Tool 0.3.0 (2026-09-30), reads spec 0.2 to 0.5
 
 Install with `go install github.com/macula-io/macula-fovea/cli/cmd/fovea@v0.3.0`

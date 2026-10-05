@@ -1,0 +1,6 @@
+describes: "station_release is declarable from v0.6: a 0.5 header that declares it names a probe its spec version does not register."
+base: valid_complete_v0_5
+remove: []
+expect:
+  errors:
+    - {rule: probe_unknown, where: deliver.integrity}

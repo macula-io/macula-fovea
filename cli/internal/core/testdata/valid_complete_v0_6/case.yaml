@@ -1,0 +1,5 @@
+describes: "The complete v0.5 assessment declared as 0.6, with a second claim: a station_release declaration, the probe v0.6 adds, on the same target."
+base: valid_complete_v0_5
+remove: []
+expect:
+  errors: []

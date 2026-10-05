@@ -1,7 +1,7 @@
 # macula-fovea
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](#license)
-[![Spec](https://img.shields.io/badge/spec-v0.5-blueviolet)](spec/v0.5/00-overview.md)
+[![Spec](https://img.shields.io/badge/spec-v0.6-blueviolet)](spec/v0.6/00-overview.md)
 [![CI](https://github.com/macula-io/macula-fovea/actions/workflows/ci.yml/badge.svg)](https://github.com/macula-io/macula-fovea/actions/workflows/ci.yml)
 [![GitHub Sponsors](https://img.shields.io/badge/GitHub%20Sponsors-support-ea4aaa.svg?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/rgfaber)
 
@@ -23,11 +23,13 @@ with the sharpest vision. `macula-fovea` is the sharpest-eyes instrument of
 the ecosystem: a small, explicit framework for answering *"what can go wrong
 here, caused by whom, and what do we honestly have against it."*
 
-> **Status, 2026-09-30:** spec [v0.5](spec/v0.5/00-overview.md) is current:
+> **Status, 2026-10-05:** spec [v0.6](spec/v0.6/00-overview.md) is current:
 > evidence on measures, `assessed` only with executable evidence, and probe
 > declarations whose observations are signed records anyone can verify
 > offline against the realm key (spec 15, 16), chained so that a kept
-> history shows every missing, duplicated or late observation (v0.5).
+> history shows every missing, duplicated or late observation (v0.5), with
+> a second probe, `station_release`: a station runs a signed public release
+> (v0.6).
 > The [`fovea`](cli/) CLI (`init`, `lint`, `score`, `render`, `issues`, `verify`) is a
 > single static Go binary and the reference implementation of the spec: its
 > `lint` enforces the fixed grid, the status and content rules and the
@@ -56,7 +58,7 @@ Macula stations); probes of other systems are planned, not built.
 **Start here:** [`docs/getting-started.md`](docs/getting-started.md) is the
 ten-minute zero-to-clean-grid walkthrough;
 [`docs/reference.md`](docs/reference.md) is the one-page statuses/rules/
-pitfalls cheat sheet; [`spec/v0.5/`](spec/v0.5/00-overview.md) is the
+pitfalls cheat sheet; [`spec/v0.6/`](spec/v0.6/00-overview.md) is the
 normative contract everything else obeys.
 
 Concretely, a fovea assessment is four artifacts, produced **in order**:
@@ -76,7 +78,7 @@ Concretely, a fovea assessment is four artifacts, produced **in order**:
 ## The matrix
 
 Sixteen columns in four families, defined in
-[`spec/v0.5/10-axes.md`](spec/v0.5/10-axes.md). The grid is fixed: a header
+[`spec/v0.6/10-axes.md`](spec/v0.6/10-axes.md). The grid is fixed: a header
 declares all sixteen, each in its own family, and lint fails a header that
 drops, moves or invents one.
 
@@ -98,12 +100,12 @@ header: nothing hidden, nothing implicit.
 (asset intact but useless), are enabled per assessment in
 [`fovea.yaml`](assessments/macula-mesh-realm/fovea.yaml), with disabled ones
 carrying a written justification. Definitions in
-[`spec/v0.5/11-attributes.md`](spec/v0.5/11-attributes.md).
+[`spec/v0.6/11-attributes.md`](spec/v0.6/11-attributes.md).
 
 ## A cell
 
 One file per `column.attribute`, checked by `fovea lint` against
-[`spec/v0.5/12-cell-schema.md`](spec/v0.5/12-cell-schema.md):
+[`spec/v0.6/12-cell-schema.md`](spec/v0.6/12-cell-schema.md):
 
 ```yaml
 id: in_motion.confidentiality
@@ -128,12 +130,12 @@ separately from everyone else's homework. That's the entire point.
 
 Computed from cell statuses, greppable by humans and CI alike. The two
 headline numbers: **pct unassessed** and **unjustified-NA count**. Full
-semantics in [`spec/v0.5/13-scorecard.md`](spec/v0.5/13-scorecard.md).
+semantics in [`spec/v0.6/13-scorecard.md`](spec/v0.6/13-scorecard.md).
 
 ## Layout
 
 ```
-spec/v0.5/            # the framework itself, current version (v0.2/ to v0.4/ archival)
+spec/v0.6/            # the framework itself, current version (v0.2/ to v0.5/ archival)
 spec/proposals/       # non-normative proposals (evidence, issues bridge)
 spec/mappings/        # cross-walks to NIST CSF, ISO 27001, ATT&CK, STRIDE
 cli/                  # the fovea binary: init / lint / score / render / issues

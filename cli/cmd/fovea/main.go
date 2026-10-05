@@ -1,4 +1,4 @@
-// fovea: CyberSec-as-Code CLI for the macula-fovea spec (v0.2 to v0.5).
+// fovea: CyberSec-as-Code CLI for the macula-fovea spec (v0.2 to v0.6).
 // Single static binary; every command runs against an assessment directory.
 package main
 
@@ -12,7 +12,7 @@ import (
 	"github.com/macula-io/macula-fovea/cli/internal/core"
 )
 
-const usage = `fovea: CyberSec-as-Code CLI (spec v0.5)
+const usage = `fovea: CyberSec-as-Code CLI (spec v0.6)
 
 usage: fovea <command> [dir]
 

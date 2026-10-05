@@ -1,0 +1,24 @@
+id: deliver.integrity
+status: assessed
+owner: fixture@example.org
+threat:
+  definition: deliver threatens integrity
+  manifestations:
+    - deliver integrity observed
+defense:
+  detection:
+    - measure: deliver integrity monitored
+      status: org
+  countermeasures:
+    - measure: deliver integrity prevented
+      status: by_design
+      source: fixture
+      evidence:
+        - kind: probe
+          claim: station_runs_signed_release
+          probe: station_release
+          version: 1
+          target: fleet_stations
+          expect:
+            accepted: [signed_release]
+  recovery: []
