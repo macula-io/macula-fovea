@@ -4,6 +4,7 @@
 [![Spec](https://img.shields.io/badge/spec-v0.6-blueviolet)](spec/v0.6/00-overview.md)
 [![CI](https://github.com/macula-io/macula-fovea/actions/workflows/ci.yml/badge.svg)](https://github.com/macula-io/macula-fovea/actions/workflows/ci.yml)
 [![GitHub Sponsors](https://img.shields.io/badge/GitHub%20Sponsors-support-ea4aaa.svg?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/rgfaber)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-ffdd00.svg?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/rlefever)
 
 <p align="center">
   <picture>
