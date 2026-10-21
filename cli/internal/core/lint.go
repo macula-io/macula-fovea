@@ -108,7 +108,6 @@ func lintCoverage(h *Header, cells map[string]*Cell) []Finding {
 }
 
 func lintEachCell(h *Header, cells map[string]*Cell) []Finding {
-	var f []Finding
 	declaredCol := map[string]bool{}
 	for _, c := range h.DeclaredColumns() {
 		declaredCol[c] = true
@@ -118,87 +117,139 @@ func lintEachCell(h *Header, cells map[string]*Cell) []Finding {
 		declaredAttr[a] = true
 	}
 
+	var f []Finding
 	for id, c := range cells {
-		// Rule: no invisible columns/attributes (12-cell-schema hard rule 2).
-		parts := strings.SplitN(id, ".", 2)
-		if len(parts) != 2 || !declaredCol[parts[0]] || !declaredAttr[parts[1]] {
-			f = append(f, errf(ruleCellIDUndeclared, id, "id parts not declared in the header"))
+		f = append(f, lintCellID(id, declaredCol, declaredAttr)...)
+		f = append(f, lintCellStatus(id, c)...)
+		f = append(f, lintCellReviewBy(id, c)...)
+		f = append(f, lintCellMeasures(id, c)...)
+		f = append(f, lintCellNotTheater(id, c)...)
+	}
+	return f
+}
+
+// lintCellID is 12-cell-schema hard rule 2: no invisible columns/attributes.
+func lintCellID(id string, declaredCol, declaredAttr map[string]bool) []Finding {
+	parts := strings.SplitN(id, ".", 2)
+	if len(parts) == 2 && declaredCol[parts[0]] && declaredAttr[parts[1]] {
+		return nil
+	}
+	return []Finding{errf(ruleCellIDUndeclared, id, "id parts not declared in the header")}
+}
+
+// lintCellStatus checks the status itself and what an answered cell must say.
+func lintCellStatus(id string, c *Cell) []Finding {
+	var f []Finding
+	if !statuses[c.Status] {
+		f = append(f, errf(ruleCellStatusUnknown, id, "unknown status %q", c.Status))
+	}
+	if unassigned(c.Owner) {
+		f = append(f, errf(ruleCellOwnerUnassigned, id, "owner is unassigned"))
+	}
+	switch c.Status {
+	case "unassessed":
+		// Spec 00 status table: unassessed is not allowed at final, and
+		// lint is what "final" means. A present cell must be answered.
+		f = append(f, errf(ruleCellUnassessed, id, "status unassessed: the cell exists but nobody has answered it"))
+	case "na":
+		f = append(f, lintNAReason(id, c)...)
+	case "roadmap", "assumed", "assessed":
+		f = append(f, lintAnswered(id, c)...)
+	}
+	return f
+}
+
+func lintNAReason(id string, c *Cell) []Finding {
+	if naJustified(c) {
+		return nil
+	}
+	return []Finding{errf(ruleNAWithoutReason, id, "status na without na_reason")}
+}
+
+// lintAnswered holds the content rules for every answered cell, roadmap
+// included: a roadmap cell is a work package and must say what the work is.
+func lintAnswered(id string, c *Cell) []Finding {
+	var f []Finding
+	if strings.TrimSpace(c.Threat.Definition) == "" {
+		f = append(f, errf(ruleDefinitionEmpty, id, "empty threat definition"))
+	}
+	if len(c.Threat.Manifestations) == 0 {
+		f = append(f, errf(ruleManifestationsEmpty, id, "zero manifestations"))
+	}
+	return append(f, lintMeasuresPresent(id, c)...)
+}
+
+// lintMeasuresPresent is spec 12 hard rule 1, no empty answers: an answered
+// cell names its measures, and detection may be empty only with an na_reason
+// arguing that detection is structurally impossible.
+func lintMeasuresPresent(id string, c *Cell) []Finding {
+	switch {
+	case len(allMeasures(c)) == 0:
+		return []Finding{errf(ruleMeasuresEmpty, id, "no detection, countermeasure or recovery measure: the cell answers nothing")}
+	case len(c.Defense.Detection) == 0 && !naJustified(c):
+		return []Finding{errf(ruleDetectionEmpty, id, "no detection measure and no na_reason arguing why detection is impossible")}
+	}
+	return nil
+}
+
+func lintCellReviewBy(id string, c *Cell) []Finding {
+	switch {
+	case strings.TrimSpace(c.ReviewBy) != "":
+		if _, err := time.Parse("2006-01-02", c.ReviewBy); err != nil {
+			return []Finding{errf(ruleReviewByNotISODate, id, "review_by %q is not an ISO date", c.ReviewBy)}
 		}
-		if !statuses[c.Status] {
-			f = append(f, errf(ruleCellStatusUnknown, id, "unknown status %q", c.Status))
+	case c.Status == "roadmap":
+		return []Finding{errf(ruleRoadmapWithoutReviewBy, id, "status roadmap without review_by")}
+	case hasRoadmapMeasure(c):
+		// Spec 12 measure statuses: a roadmap measure requires review_by
+		// on the cell, whatever the cell's own status.
+		return []Finding{errf(ruleRoadmapMeasureWithoutReviewBy, id, "roadmap measure without review_by on the cell")}
+	}
+	return nil
+}
+
+func hasRoadmapMeasure(c *Cell) bool {
+	for _, m := range allMeasures(c) {
+		if m.Status == "roadmap" {
+			return true
 		}
-		if unassigned(c.Owner) {
-			f = append(f, errf(ruleCellOwnerUnassigned, id, "owner is unassigned"))
+	}
+	return false
+}
+
+func lintCellMeasures(id string, c *Cell) []Finding {
+	var f []Finding
+	for _, m := range allMeasures(c) {
+		if !measureStatuses[m.Status] {
+			f = append(f, errf(ruleMeasureStatusUnknown, id, "measure with unknown status %q", m.Status))
 		}
-		switch c.Status {
-		case "unassessed":
-			// Spec 00 status table: unassessed is not allowed at final, and
-			// lint is what "final" means. A present cell must be answered.
-			f = append(f, errf(ruleCellUnassessed, id, "status unassessed: the cell exists but nobody has answered it"))
-		case "na":
-			if !naJustified(c) {
-				f = append(f, errf(ruleNAWithoutReason, id, "status na without na_reason"))
-			}
-		case "roadmap", "assumed", "assessed":
-			// Content rules hold for every answered cell, roadmap included:
-			// a roadmap cell is a work package and must say what the work is.
-			if strings.TrimSpace(c.Threat.Definition) == "" {
-				f = append(f, errf(ruleDefinitionEmpty, id, "empty threat definition"))
-			}
-			if len(c.Threat.Manifestations) == 0 {
-				f = append(f, errf(ruleManifestationsEmpty, id, "zero manifestations"))
-			}
-			// Spec 12 hard rule 1, no empty answers: an answered cell names
-			// its measures, and detection may be empty only with an na_reason
-			// arguing that detection is structurally impossible.
-			switch {
-			case len(allMeasures(c)) == 0:
-				f = append(f, errf(ruleMeasuresEmpty, id, "no detection, countermeasure or recovery measure: the cell answers nothing"))
-			case len(c.Defense.Detection) == 0 && !naJustified(c):
-				f = append(f, errf(ruleDetectionEmpty, id, "no detection measure and no na_reason arguing why detection is impossible"))
-			}
-		}
-		hasRoadmapMeasure := false
-		for _, m := range allMeasures(c) {
-			hasRoadmapMeasure = hasRoadmapMeasure || m.Status == "roadmap"
-		}
-		switch {
-		case strings.TrimSpace(c.ReviewBy) != "":
-			if _, err := time.Parse("2006-01-02", c.ReviewBy); err != nil {
-				f = append(f, errf(ruleReviewByNotISODate, id, "review_by %q is not an ISO date", c.ReviewBy))
-			}
-		case c.Status == "roadmap":
-			f = append(f, errf(ruleRoadmapWithoutReviewBy, id, "status roadmap without review_by"))
-		case hasRoadmapMeasure:
-			// Spec 12 measure statuses: a roadmap measure requires review_by
-			// on the cell, whatever the cell's own status.
-			f = append(f, errf(ruleRoadmapMeasureWithoutReviewBy, id, "roadmap measure without review_by on the cell"))
-		}
-		for _, m := range allMeasures(c) {
-			if !measureStatuses[m.Status] {
-				f = append(f, errf(ruleMeasureStatusUnknown, id, "measure with unknown status %q", m.Status))
-			}
-			if m.Status == "by_design" && strings.TrimSpace(m.Source) == "" {
-				f = append(f, errf(ruleByDesignWithoutSource, id, "by_design measure without source"))
-			}
-		}
-		// Anti-theater: assessed must mean the product answers something.
-		if c.Status == "assessed" {
-			ms := allMeasures(c)
-			if len(ms) > 0 {
-				allOrg := true
-				for _, m := range ms {
-					if m.Status != "org" {
-						allOrg = false
-					}
-				}
-				if allOrg {
-					f = append(f, errf(ruleAssessedAllOrg, id, "status assessed but every measure is org; the cell is org-managed, not assessed"))
-				}
-			}
+		if m.Status == "by_design" && strings.TrimSpace(m.Source) == "" {
+			f = append(f, errf(ruleByDesignWithoutSource, id, "by_design measure without source"))
 		}
 	}
 	return f
+}
+
+// lintCellNotTheater: assessed must mean the product answers something.
+func lintCellNotTheater(id string, c *Cell) []Finding {
+	if c.Status != "assessed" || !allOrgManaged(c) {
+		return nil
+	}
+	return []Finding{errf(ruleAssessedAllOrg, id, "status assessed but every measure is org; the cell is org-managed, not assessed")}
+}
+
+// allOrgManaged reports whether the cell has measures and every one is org.
+func allOrgManaged(c *Cell) bool {
+	ms := allMeasures(c)
+	if len(ms) == 0 {
+		return false
+	}
+	for _, m := range ms {
+		if m.Status != "org" {
+			return false
+		}
+	}
+	return true
 }
 
 // naJustified is the one test of "na with a written reason" that lint,

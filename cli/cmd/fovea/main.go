@@ -103,69 +103,93 @@ func main() {
 
 // run is the whole CLI minus the process: args exclude the program name.
 func run(argv []string, stdout, stderr io.Writer) int {
-	switch {
-	case len(argv) < 1:
-		fmt.Fprintln(stderr, usage)
-		return 2
-	case argv[0] == "-h" || argv[0] == "--help":
-		// Help that was asked for is output, not an error.
-		fmt.Fprintln(stdout, usage)
-		return 0
-	case argv[0] == "--version":
-		fmt.Fprintf(stdout, "fovea %s (reads spec %s)\n", toolVersion(), strings.Join(core.SpecVersions(), ", "))
-		return 0
-	case argv[0] == "--help-issues":
-		fmt.Fprintln(stdout, issuesUsage)
-		return 0
-	case argv[0] == "verify":
-		core.ToolVersion = toolVersion()
-		return core.RunVerify(argv[1:], stdout, stderr)
+	if code, handled := earlyCommand(argv, stdout, stderr); handled {
+		return code
 	}
-	dir := "."
-	jsonOut := false
-	githubOut := false
-	htmlOut := false
-	args := argv[1:]
-	for i := 0; i < len(args); i++ {
-		a := args[i]
-		if a == "--format" && i+1 < len(args) {
-			i++
-			a = "--format=" + args[i]
-		}
-		if strings.HasPrefix(a, "--") && argv[0] != "issues" && knownFlag[a] && !takes[argv[0]][a] {
-			fmt.Fprintf(stderr, "fovea: %s does not take %s\n\n%s\n", argv[0], a, usage)
-			return 2
-		}
-		switch a {
-		case "--json", "--format=json":
-			jsonOut = true
-		case "--github":
-			githubOut = true
-		case "--html", "--format=html":
-			htmlOut = true
-		case "--format=md":
-			// markdown is render's default output
-		default:
-			if strings.HasPrefix(a, "--") && argv[0] != "issues" {
-				fmt.Fprintf(stderr, "fovea: unknown flag %s\n\n%s\n", a, usage)
-				return 2
-			}
-			dir = a
-		}
+	opt, code, ok := parseArgs(argv[0], argv[1:], stderr)
+	if !ok {
+		return code
 	}
 	switch argv[0] {
 	case "init":
-		return core.Init(dir, stdout, stderr)
+		return core.Init(opt.dir, stdout, stderr)
 	case "lint":
-		return core.Lint(dir, githubOut, stdout, stderr)
+		return core.Lint(opt.dir, opt.githubOut, stdout, stderr)
 	case "score":
-		return core.Score(dir, jsonOut, stdout, stderr)
+		return core.Score(opt.dir, opt.jsonOut, stdout, stderr)
 	case "render":
-		return core.Render(dir, jsonOut, htmlOut, stdout, stderr)
+		return core.Render(opt.dir, opt.jsonOut, opt.htmlOut, stdout, stderr)
 	case "issues":
 		return core.RunIssues(parseIssuesFlags(argv[1:]), stdout, stderr)
 	default:
 		fmt.Fprintln(stderr, usage)
 		return 2
 	}
+}
+
+// earlyCommand handles the argv[0] forms that never reach flag parsing: help,
+// version and verify. handled is false when argv[0] is a normal command.
+func earlyCommand(argv []string, stdout, stderr io.Writer) (int, bool) {
+	switch {
+	case len(argv) < 1:
+		fmt.Fprintln(stderr, usage)
+		return 2, true
+	case argv[0] == "-h" || argv[0] == "--help":
+		// Help that was asked for is output, not an error.
+		fmt.Fprintln(stdout, usage)
+		return 0, true
+	case argv[0] == "--version":
+		fmt.Fprintf(stdout, "fovea %s (reads spec %s)\n", toolVersion(), strings.Join(core.SpecVersions(), ", "))
+		return 0, true
+	case argv[0] == "--help-issues":
+		fmt.Fprintln(stdout, issuesUsage)
+		return 0, true
+	case argv[0] == "verify":
+		core.ToolVersion = toolVersion()
+		return core.RunVerify(argv[1:], stdout, stderr), true
+	}
+	return 0, false
+}
+
+// options are the flags init, lint, score and render share, and the directory
+// they act on.
+type options struct {
+	dir       string
+	jsonOut   bool
+	githubOut bool
+	htmlOut   bool
+}
+
+// parseArgs reads those flags. A flag the command does not take is refused
+// rather than ignored, so `lint --json` cannot look like it produced JSON.
+func parseArgs(cmd string, args []string, stderr io.Writer) (options, int, bool) {
+	opt := options{dir: "."}
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		if a == "--format" && i+1 < len(args) {
+			i++
+			a = "--format=" + args[i]
+		}
+		if strings.HasPrefix(a, "--") && cmd != "issues" && knownFlag[a] && !takes[cmd][a] {
+			fmt.Fprintf(stderr, "fovea: %s does not take %s\n\n%s\n", cmd, a, usage)
+			return opt, 2, false
+		}
+		switch a {
+		case "--json", "--format=json":
+			opt.jsonOut = true
+		case "--github":
+			opt.githubOut = true
+		case "--html", "--format=html":
+			opt.htmlOut = true
+		case "--format=md":
+			// markdown is render's default output
+		default:
+			if strings.HasPrefix(a, "--") && cmd != "issues" {
+				fmt.Fprintf(stderr, "fovea: unknown flag %s\n\n%s\n", a, usage)
+				return opt, 2, false
+			}
+			opt.dir = a
+		}
+	}
+	return opt, 0, true
 }

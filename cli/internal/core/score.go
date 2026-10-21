@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -104,56 +105,83 @@ func computeMetrics(h *Header, cells map[string]*Cell, lintErrs int) Metrics {
 		LintErrors:    lintErrs,
 		ExpectedCells: len(h.ExpectedCells()),
 	}
-	total, unassessed, naUnj, byDesign, totalMeasures := 0, 0, 0, 0, 0
-	oldest := ""
-	today := time.Now()
-
+	t := cellTally{today: time.Now()}
 	for _, id := range h.ExpectedCells() {
-		total++
-		c := cells[id]
-		if c == nil || c.Status == "unassessed" {
-			unassessed++
-		}
-		if c != nil && c.Status == "na" && !naJustified(c) {
-			naUnj++
-		}
-		if c != nil && c.Status == "roadmap" && c.ReviewBy != "" {
-			if t, err := time.Parse("2006-01-02", c.ReviewBy); err == nil {
-				if oldest == "" || t.Before(mustParse(oldest)) {
-					oldest = c.ReviewBy
-				}
-				if t.Before(today) {
-					m.OverdueRoadmap++
-				}
-			}
-		}
-		if c != nil {
-			attr := ""
-			if len(id) > 0 {
-				for i := len(id) - 1; i >= 0; i-- {
-					if id[i] == '.' {
-						attr = id[i+1:]
-						break
-					}
-				}
-			}
-			m.ByAttribute[attr]++
-			m.ByFamily[h.FamilyOf(id[:len(id)-len(attr)-1])]++
-			for _, ms := range allMeasures(c) {
-				totalMeasures++
-				if ms.Status == "by_design" {
-					byDesign++
-				}
-			}
-		}
+		t.add(h, id, cells[id], m.ByAttribute, m.ByFamily)
 	}
 	m.PresentCells = len(cells)
-	m.MissingCells = total - presentExpected(h, cells)
-	m.PctUnassessed = pct(unassessed, total)
-	m.NAUnjustified = naUnj
-	m.PctByDesign = pct(byDesign, totalMeasures)
-	m.OldestReviewBy = oldest
+	m.MissingCells = t.total - presentExpected(h, cells)
+	m.PctUnassessed = pct(t.unassessed, t.total)
+	m.NAUnjustified = t.naUnjustified
+	m.PctByDesign = pct(t.byDesign, t.totalMeasures)
+	m.OldestReviewBy = t.oldest
+	m.OverdueRoadmap = t.overdue
 	return m
+}
+
+// cellTally accumulates the score metrics across the expected grid.
+type cellTally struct {
+	today         time.Time
+	total         int
+	unassessed    int
+	naUnjustified int
+	byDesign      int
+	totalMeasures int
+	overdue       int
+	oldest        string
+}
+
+func (t *cellTally) add(h *Header, id string, c *Cell, byAttr, byFam map[string]int) {
+	t.total++
+	if c == nil || c.Status == "unassessed" {
+		t.unassessed++
+	}
+	if c == nil {
+		return
+	}
+	t.tallyAnswer(c)
+	t.tallyPosition(h, id, byAttr, byFam)
+}
+
+// tallyAnswer counts what the cell says: unjustified N/A, measures, and a
+// roadmap review date that is due.
+func (t *cellTally) tallyAnswer(c *Cell) {
+	if c.Status == "na" && !naJustified(c) {
+		t.naUnjustified++
+	}
+	t.tallyReviewBy(c)
+	for _, ms := range allMeasures(c) {
+		t.totalMeasures++
+		if ms.Status == "by_design" {
+			t.byDesign++
+		}
+	}
+}
+
+func (t *cellTally) tallyReviewBy(c *Cell) {
+	if c.Status != "roadmap" || c.ReviewBy == "" {
+		return
+	}
+	due, err := time.Parse("2006-01-02", c.ReviewBy)
+	if err != nil {
+		return
+	}
+	if t.oldest == "" || due.Before(mustParse(t.oldest)) {
+		t.oldest = c.ReviewBy
+	}
+	if due.Before(t.today) {
+		t.overdue++
+	}
+}
+
+// tallyPosition counts the cell under its column and its attribute family.
+func (t *cellTally) tallyPosition(h *Header, id string, byAttr, byFam map[string]int) {
+	attr := ""
+	if i := strings.LastIndex(id, "."); i >= 0 {
+		attr = id[i+1:]
+	}
+	byAttr[attr]++
+	byFam[h.FamilyOf(id[:len(id)-len(attr)-1])]++
 }
 
 // presentExpected counts how many declared-grid ids were actually provided.

@@ -144,106 +144,177 @@ func refuse(step int, format string, args ...any) *Refusal {
 
 // VerifyObservation runs the nine steps of spec 15 in order.
 func VerifyObservation(in VerifyInput) (*Verified, *Refusal) {
-	// 1. A macula record of type 0x23 at T = its created_at, not dated in the
-	// verifier's future.
+	obs, created, refusal := verifyObservationRecord(in)
+	if refusal != nil {
+		return nil, refusal
+	}
+	p, refusal := verifyPayload(obs)
+	if refusal != nil {
+		return nil, refusal
+	}
+	e, refusal := verifyEndorsement(in, obs, created)
+	if refusal != nil {
+		return nil, refusal
+	}
+	if refusal := verifyRealm(in.RealmName, p); refusal != nil {
+		return nil, refusal
+	}
+	observer := identity.NodeIDOf(obs.Key, in.Profile)
+	if refusal := verifyAdmittedNode(e, observer); refusal != nil {
+		return nil, refusal
+	}
+	if refusal := verifyAdmissionWindow(e, created); refusal != nil {
+		return nil, refusal
+	}
+	// A revision that cannot be read refuses at step 9, as spec 15 says, once
+	// step 8 has run.
+	h, cells, unreadable := in.Assessment(p.assessmentSHA)
+	if refusal := verifyTrustedObserver(h, unreadable, p, observer); refusal != nil {
+		return nil, refusal
+	}
+	if refusal := verifyJudgement(p); refusal != nil {
+		return nil, refusal
+	}
+	if refusal := verifyDeclaredRevision(h, cells, unreadable, p); refusal != nil {
+		return nil, refusal
+	}
+	return verifiedObservation(in, obs, created, p, observer, h), nil
+}
+
+// verifyObservationRecord is step 1: a macula record of type 0x23 at T = its
+// created_at, not dated in the verifier's future.
+func verifyObservationRecord(in VerifyInput) (record.Record, uint64, *Refusal) {
 	created, err := createdAt(in.Observation)
 	if err != nil {
-		return nil, refuse(1, "not a macula record: %v", err)
+		return record.Record{}, 0, refuse(1, "not a macula record: %v", err)
 	}
 	if int64(created) > in.NowMs+clockToleranceMs {
-		return nil, refuse(1, "created_at %s is more than 5 minutes after this clock", ms(created))
+		return record.Record{}, 0, refuse(1, "created_at %s is more than 5 minutes after this clock", ms(created))
 	}
-	T := int64(created)
-	verified, err := record.Verify(in.Observation, in.Profile, T)
+	verified, err := record.Verify(in.Observation, in.Profile, int64(created))
 	if err != nil {
-		return nil, refuse(1, "the record does not verify: %v", err)
+		return record.Record{}, 0, refuse(1, "the record does not verify: %v", err)
 	}
 	obs := verified.Record()
 	if obs.Type != observationType {
-		return nil, refuse(1, "type 0x%02x, not 0x23", uint8(obs.Type))
+		return obs, 0, refuse(1, "type 0x%02x, not 0x23", uint8(obs.Type))
 	}
+	return obs, created, nil
+}
 
-	// 2. Exactly the payload of spec 15, and the subject it implies.
+// verifyPayload is step 2: exactly the payload of spec 15, and the subject it
+// implies.
+func verifyPayload(obs record.Record) (payload, *Refusal) {
 	p, reason := readPayload(obs)
 	if reason != "" {
-		return nil, refuse(2, "%s", reason)
+		return payload{}, refuse(2, "%s", reason)
 	}
+	return p, nil
+}
 
-	// 3. The endorsement is a realm member endorsement, signed by the realm key.
-	endorsed, err := record.Verify(in.Endorsement, in.Profile, T)
+// verifyEndorsement is step 3: a realm member endorsement, signed by the realm
+// key; and the first half of step 4, that it is of this realm.
+func verifyEndorsement(in VerifyInput, obs record.Record, created uint64) (record.Record, *Refusal) {
+	endorsed, err := record.Verify(in.Endorsement, in.Profile, int64(created))
 	if err != nil {
-		return nil, refuse(3, "the endorsement does not verify at %s: %v", ms(created), err)
+		return record.Record{}, refuse(3, "the endorsement does not verify at %s: %v", ms(created), err)
 	}
 	e := endorsed.Record()
 	if e.Type != record.TypeRealmMemberEndorsement {
-		return nil, refuse(3, "the endorsement is of type 0x%02x, not 0x05", uint8(e.Type))
+		return e, refuse(3, "the endorsement is of type 0x%02x, not 0x05", uint8(e.Type))
 	}
 	if identity.KeyIDOf(e.Key, in.Profile) != identity.KeyIDOf(in.RealmKey, in.Profile) {
-		return nil, refuse(3, "the endorsement is not signed by the realm key")
+		return e, refuse(3, "the endorsement is not signed by the realm key")
 	}
-
-	// 4. Of this realm, and so is the observation.
 	realmID := sha256.Sum256([]byte(in.RealmName))
 	endorsedRealm, _ := e.Payload.Get("realm_id")
 	if b, _ := endorsedRealm.AsBytes(); !bytes.Equal(b, realmID[:]) {
-		return nil, refuse(4, "the endorsement's realm_id is not SHA-256 of %q", in.RealmName)
+		return e, refuse(4, "the endorsement's realm_id is not SHA-256 of %q", in.RealmName)
 	}
+	return e, nil
+}
+
+// verifyRealm is the rest of step 4: so is the observation.
+func verifyRealm(realmName string, p payload) *Refusal {
+	realmID := sha256.Sum256([]byte(realmName))
 	if !bytes.Equal(p.realmID, realmID[:]) {
-		return nil, refuse(4, "the observation's realm_id is not SHA-256 of %q", in.RealmName)
+		return refuse(4, "the observation's realm_id is not SHA-256 of %q", realmName)
 	}
+	return nil
+}
 
-	// 5. For the node whose identity key signed the observation.
-	observer := identity.NodeIDOf(obs.Key, in.Profile)
+// verifyAdmittedNode is step 5: the endorsement is for the node whose identity
+// key signed the observation.
+func verifyAdmittedNode(e record.Record, observer [32]byte) *Refusal {
 	member, _ := e.Payload.Get("member_node")
-	if b, _ := member.AsBytes(); !bytes.Equal(b, observer[:]) {
-		return nil, refuse(5, "the endorsement admits another node than %x, the observation's signer", observer)
+	if b, _ := member.AsBytes(); bytes.Equal(b, observer[:]) {
+		return nil
 	}
+	return refuse(5, "the endorsement admits another node than %x, the observation's signer", observer)
+}
 
-	// 6. Admitting it at T, for at most 30 days.
+// verifyAdmissionWindow is step 6: the endorsement admits the node at T, for
+// at most 30 days.
+func verifyAdmissionWindow(e record.Record, created uint64) *Refusal {
 	from, okFrom := uintField(e.Payload, "valid_from")
 	until, okUntil := uintField(e.Payload, "valid_until")
 	switch {
 	case !okFrom || !okUntil:
-		return nil, refuse(6, "the endorsement has no integer valid_from and valid_until")
+		return refuse(6, "the endorsement has no integer valid_from and valid_until")
 	case until < from || until-from > uint64(record.MaxEndorsementWindowMs):
-		return nil, refuse(6, "the endorsement's window is not at most 30 days")
+		return refuse(6, "the endorsement's window is not at most 30 days")
 	case created < from || created > until:
-		return nil, refuse(6, "the endorsement admits %s to %s, not %s", ms(from), ms(until), ms(created))
+		return refuse(6, "the endorsement admits %s to %s, not %s", ms(from), ms(until), ms(created))
 	}
+	return nil
+}
 
-	// 7. An observer the named revision trusts. A revision that cannot be
-	// read refuses at step 9, as spec 15 says, once step 8 has run.
-	h, cells, unreadable := in.Assessment(p.assessmentSHA)
-	if unreadable == nil && (h.Policy == nil || !slices.Contains(h.Policy.Observers, hex.EncodeToString(observer[:]))) {
-		return nil, refuse(7, "%x is not one of revision %x's policy.observers", observer, p.assessmentSHA)
+// verifyTrustedObserver is step 7: an observer the named revision trusts.
+func verifyTrustedObserver(h *Header, unreadable error, p payload, observer [32]byte) *Refusal {
+	switch {
+	case unreadable != nil:
+		return nil
+	case h.Policy == nil || !slices.Contains(h.Policy.Observers, hex.EncodeToString(observer[:])):
+		return refuse(7, "%x is not one of revision %x's policy.observers", observer, p.assessmentSHA)
 	}
+	return nil
+}
 
-	// 8. The state the probe's judgement gives.
+// verifyJudgement is step 8: the state the probe's judgement gives.
+func verifyJudgement(p payload) *Refusal {
 	if !sameKeys(p.expected, p.outcomes) {
-		return nil, refuse(8, "outcomes do not name exactly the expected groups")
+		return refuse(8, "outcomes do not name exactly the expected groups")
 	}
 	judge, known := judgements[p.probe][int(p.probeVersion)]
 	if !known {
-		return nil, refuse(8, "no judgement for probe %s version %d", p.probe, p.probeVersion)
+		return refuse(8, "no judgement for probe %s version %d", p.probe, p.probeVersion)
 	}
 	if want := judge(p.expected, p.outcomes); want != p.state {
-		return nil, refuse(8, "state %s, but the outcomes judge %s", stateNames[p.state], stateNames[want])
+		return refuse(8, "state %s, but the outcomes judge %s", stateNames[p.state], stateNames[want])
 	}
+	return nil
+}
 
-	// 9. The revision's own claim, on a station it declares.
+// verifyDeclaredRevision is step 9: the revision is readable, and it declares
+// the claim the observation reports.
+func verifyDeclaredRevision(h *Header, cells map[string]*Cell, unreadable error, p payload) *Refusal {
 	if unreadable != nil {
-		return nil, refuse(9, "assessment revision %x cannot be read: %v", p.assessmentSHA, unreadable)
+		return refuse(9, "assessment revision %x cannot be read: %v", p.assessmentSHA, unreadable)
 	}
 	if reason := declared(h, cells, p); reason != "" {
-		return nil, refuse(9, "%s", reason)
+		return refuse(9, "%s", reason)
 	}
+	return nil
+}
+
+func verifiedObservation(in VerifyInput, obs record.Record, created uint64, p payload, observer [32]byte, h *Header) *Verified {
 	return &Verified{
 		System: p.system, ClaimID: p.claimID, TargetAddress: p.targetAddress, State: stateNames[p.state],
 		Observer: observer, CreatedAt: created, ObservedAt: p.observedAt, AssessmentSHA: p.assessmentSHA,
 		Outcomes: p.outcomes, Chained: p.chained, Seq: p.seq, Prev: p.prev, Key: obs.Key, Subject: obs.Subject,
 		WireHash: sha256.Sum256(in.Observation), revision: h,
 		StationNode: p.stationNode, Publish: publishNames[p.publish], KeyID: obs.KeyID, Slot: slotOf(obs),
-	}, nil
+	}
 }
 
 // slotOf is a verified record's DHT storage key: its signer key id and
@@ -290,36 +361,69 @@ type payload struct {
 // readPayload is step 2: exactly spec 15's keys, each once and of its kind,
 // in range, and the subject they imply. It returns a reason on refusal.
 func readPayload(r record.Record) (payload, string) {
+	fields, reason := readPayloadFields(r)
+	if reason != "" {
+		return payload{}, reason
+	}
+	if reason := checkPayloadShape(fields); reason != "" {
+		return payload{}, reason
+	}
+	p, reason := payloadFrom(fields, r.CreatedAt)
+	if reason != "" {
+		return payload{}, reason
+	}
+	subject := p.system + "\x00" + p.claimID + "\x00" + p.targetAddress
+	if !bytes.Equal(r.Subject, []byte(subject)) {
+		return payload{}, "the subject is not system 0x00 claim_id 0x00 target_address"
+	}
+	return p, ""
+}
+
+// readPayloadFields reads the payload's entries: every key text and present
+// once, known to spec 15, and holding the kind of value spec 15 gives it.
+func readPayloadFields(r record.Record) (map[string]cbor.Value, string) {
 	entries, _ := r.Payload.AsMap()
 	fields := map[string]cbor.Value{}
 	for _, e := range entries {
 		k, isText := e.Key.AsText()
 		switch {
 		case !isText:
-			return payload{}, "a payload key that is not text"
+			return nil, "a payload key that is not text"
 		case hasKey(fields, k):
-			return payload{}, fmt.Sprintf("payload key %q twice", k)
+			return nil, fmt.Sprintf("payload key %q twice", k)
 		}
 		kind, known := payloadKeys[k]
 		if chainKind, chain := chainKeys[k]; chain {
 			kind, known = chainKind, true
 		}
 		if !known {
-			return payload{}, fmt.Sprintf("payload key %q is not spec 15's", k)
+			return nil, fmt.Sprintf("payload key %q is not spec 15's", k)
 		}
 		if e.Val.Kind() != kind {
-			return payload{}, fmt.Sprintf("payload %s is not of its kind", k)
+			return nil, fmt.Sprintf("payload %s is not of its kind", k)
 		}
 		fields[k] = e.Val
 	}
+	return fields, ""
+}
+
+// checkPayloadShape is the other direction of spec 15's key list: every key
+// present, and seq and prev carried as a pair.
+func checkPayloadShape(fields map[string]cbor.Value) string {
 	for k := range payloadKeys {
 		if !hasKey(fields, k) {
-			return payload{}, fmt.Sprintf("payload key %q is missing", k)
+			return fmt.Sprintf("payload key %q is missing", k)
 		}
 	}
 	if hasKey(fields, "seq") != hasKey(fields, "prev") {
-		return payload{}, "a payload with one of seq and prev, not both"
+		return "a payload with one of seq and prev, not both"
 	}
+	return ""
+}
+
+// payloadFrom builds the payload and checks every value against its range and
+// against the record's own created_at.
+func payloadFrom(fields map[string]cbor.Value, createdAt uint64) (payload, string) {
 	text := func(k string) string { s, _ := fields[k].AsText(); return s }
 	raw := func(k string) []byte { b, _ := fields[k].AsBytes(); return b }
 	num := func(k string) uint64 { n, _ := fields[k].AsInt64(); return uint64(n) }
@@ -336,29 +440,32 @@ func readPayload(r record.Record) (payload, string) {
 	if p.outcomes, reason = groups(fields["outcomes"], "outcomes", 2); reason != "" {
 		return payload{}, reason
 	}
-	switch {
-	case len(p.realmID) != 32:
-		return payload{}, "realm_id is not 32 bytes"
-	case len(p.stationNode) != 32:
-		return payload{}, "station_node is not 32 bytes"
-	case len(p.assessmentSHA) != 20 && len(p.assessmentSHA) != 32:
-		return payload{}, "assessment_sha is not 20 or 32 bytes"
-	case p.state > 2:
-		return payload{}, fmt.Sprintf("state %d is not 0, 1 or 2", p.state)
-	case p.publish > 1:
-		return payload{}, fmt.Sprintf("publish %d is not 0 or 1", p.publish)
-	case p.observedAt > r.CreatedAt:
-		return payload{}, "observed_at is after created_at"
-	case p.chained && len(p.prev) != 32:
-		return payload{}, "prev is not 32 bytes"
-	case p.chained && (p.seq == 0) != bytes.Equal(p.prev, make([]byte, 32)):
-		return payload{}, "prev is 32 zero bytes other than exactly at seq 0"
-	}
-	subject := p.system + "\x00" + p.claimID + "\x00" + p.targetAddress
-	if !bytes.Equal(r.Subject, []byte(subject)) {
-		return payload{}, "the subject is not system 0x00 claim_id 0x00 target_address"
+	if reason := checkPayloadRanges(p, createdAt); reason != "" {
+		return payload{}, reason
 	}
 	return p, ""
+}
+
+func checkPayloadRanges(p payload, createdAt uint64) string {
+	switch {
+	case len(p.realmID) != 32:
+		return "realm_id is not 32 bytes"
+	case len(p.stationNode) != 32:
+		return "station_node is not 32 bytes"
+	case len(p.assessmentSHA) != 20 && len(p.assessmentSHA) != 32:
+		return "assessment_sha is not 20 or 32 bytes"
+	case p.state > 2:
+		return fmt.Sprintf("state %d is not 0, 1 or 2", p.state)
+	case p.publish > 1:
+		return fmt.Sprintf("publish %d is not 0 or 1", p.publish)
+	case p.observedAt > createdAt:
+		return "observed_at is after created_at"
+	case p.chained && len(p.prev) != 32:
+		return "prev is not 32 bytes"
+	case p.chained && (p.seq == 0) != bytes.Equal(p.prev, make([]byte, 32)):
+		return "prev is 32 zero bytes other than exactly at seq 0"
+	}
+	return ""
 }
 
 func hasKey(m map[string]cbor.Value, k string) bool { _, ok := m[k]; return ok }
@@ -414,34 +521,48 @@ func declared(h *Header, cells map[string]*Cell, p payload) string {
 	if p.chained && h.Policy.Publish != publishNames[p.publish] {
 		return fmt.Sprintf("the revision's policy.publish is %q, not %q", h.Policy.Publish, publishNames[p.publish])
 	}
+	d, reason := declarationOf(cells, p.claimID)
+	if reason != "" {
+		return reason
+	}
+	if reason := checkDeclaration(d, p, h.Fovea); reason != "" {
+		return reason
+	}
+	return declaredStation(h, d, p)
+}
+
+// declarationOf is the one probe declaration of a claim, or the reason the
+// revision cannot be read as declaring exactly one.
+func declarationOf(cells map[string]*Cell, claimID string) (Evidence, string) {
 	var found []Evidence
 	for _, id := range sortedIDs(cells) {
 		for _, m := range allMeasures(cells[id]) {
 			for _, e := range m.Evidence {
-				if e.Kind == "probe" && e.Claim == p.claimID {
+				if e.Kind == "probe" && e.Claim == claimID {
 					found = append(found, e)
 				}
 			}
 		}
 	}
 	if len(found) != 1 {
-		return fmt.Sprintf("the revision holds %d probe declarations of claim %s, not one", len(found), p.claimID)
+		return Evidence{}, fmt.Sprintf("the revision holds %d probe declarations of claim %s, not one", len(found), claimID)
 	}
-	d := found[0]
+	return found[0], ""
+}
+
+// checkDeclaration says whether the declaration names this probe and version,
+// is in the revision's registry, and expects exactly what the observation
+// reports.
+func checkDeclaration(d Evidence, p payload, foveaVersion string) string {
 	if d.Probe != p.probe || uint64(d.Version) != p.probeVersion {
 		return fmt.Sprintf("claim %s is declared as %s version %d, not %s version %d", p.claimID, d.Probe, d.Version, p.probe, p.probeVersion)
 	}
-	if _, known := registered(d.Probe, d.Version, h.Fovea); !known {
-		return fmt.Sprintf("probe %s version %d is not in spec %s's registry", d.Probe, d.Version, h.Fovea)
+	if _, known := registered(d.Probe, d.Version, foveaVersion); !known {
+		return fmt.Sprintf("probe %s version %d is not in spec %s's registry", d.Probe, d.Version, foveaVersion)
 	}
-	want := map[string]uint64{}
-	for side, gs := range map[uint64][]string{0: d.Expect.Accepted, 1: d.Expect.Refused} {
-		for _, g := range gs {
-			if _, twice := want[g]; twice {
-				return fmt.Sprintf("claim %s expects %s twice", p.claimID, g)
-			}
-			want[g] = side
-		}
+	want, reason := expectation(d, p.claimID)
+	if reason != "" {
+		return reason
 	}
 	if !sameKeys(want, p.expected) {
 		return fmt.Sprintf("expected is not claim %s's expectation", p.claimID)
@@ -451,17 +572,39 @@ func declared(h *Header, cells map[string]*Cell, p payload) string {
 			return fmt.Sprintf("expected is not claim %s's expectation", p.claimID)
 		}
 	}
+	return ""
+}
+
+// expectation turns a declaration's accepted and refused groups into the value
+// each group is expected to have.
+func expectation(d Evidence, claimID string) (map[string]uint64, string) {
+	want := map[string]uint64{}
+	for side, gs := range map[uint64][]string{0: d.Expect.Accepted, 1: d.Expect.Refused} {
+		for _, g := range gs {
+			if _, twice := want[g]; twice {
+				return nil, fmt.Sprintf("claim %s expects %s twice", claimID, g)
+			}
+			want[g] = side
+		}
+	}
+	return want, ""
+}
+
+// declaredStation says whether the declaration's target is declared at all,
+// and lists target_address as the observation's station node.
+func declaredStation(h *Header, d Evidence, p payload) string {
 	target, ok := h.Targets[d.Target]
 	if !ok {
 		return fmt.Sprintf("claim %s's target %q is not declared", p.claimID, d.Target)
 	}
 	for _, s := range target.Stations {
-		if s.Address == p.targetAddress {
-			if s.NodeID != hex.EncodeToString(p.stationNode) {
-				return fmt.Sprintf("the revision declares %s as node %s, not %x", s.Address, s.NodeID, p.stationNode)
-			}
-			return ""
+		if s.Address != p.targetAddress {
+			continue
 		}
+		if s.NodeID != hex.EncodeToString(p.stationNode) {
+			return fmt.Sprintf("the revision declares %s as node %s, not %x", s.Address, s.NodeID, p.stationNode)
+		}
+		return ""
 	}
 	return fmt.Sprintf("target %s does not list %s", d.Target, p.targetAddress)
 }
@@ -534,31 +677,39 @@ func untar(b []byte, dir string) error {
 			return fmt.Errorf("an archive path %q outside the assessment", hd.Name)
 		}
 		target := filepath.Join(dir, filepath.FromSlash(name))
-		switch hd.Typeflag {
-		case tar.TypeDir:
-			if err := os.MkdirAll(target, 0o755); err != nil {
-				return err
-			}
-		case tar.TypeReg:
-			if total += hd.Size; total > maxAssessmentBytes {
-				return errors.New("the assessment is over 16 MiB")
-			}
-			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-				return err
-			}
-			data, err := io.ReadAll(io.LimitReader(r, hd.Size))
-			if err != nil {
-				return err
-			}
-			if err := os.WriteFile(target, data, 0o644); err != nil {
-				return err
-			}
-		case tar.TypeXGlobalHeader:
-			// git archive's commit id comment
-		default:
-			return fmt.Errorf("an archive entry %q that is not a file or directory", hd.Name)
+		if total, err = untarEntry(r, hd, target, total); err != nil {
+			return err
 		}
 	}
+}
+
+// untarEntry writes one archive entry and returns the running total of file
+// bytes written so far.
+func untarEntry(r *tar.Reader, hd *tar.Header, target string, total int64) (int64, error) {
+	switch hd.Typeflag {
+	case tar.TypeDir:
+		return total, os.MkdirAll(target, 0o755)
+	case tar.TypeReg:
+		return untarFile(r, hd, target, total)
+	case tar.TypeXGlobalHeader:
+		// git archive's commit id comment
+		return total, nil
+	}
+	return total, fmt.Errorf("an archive entry %q that is not a file or directory", hd.Name)
+}
+
+func untarFile(r *tar.Reader, hd *tar.Header, target string, total int64) (int64, error) {
+	if total += hd.Size; total > maxAssessmentBytes {
+		return total, errors.New("the assessment is over 16 MiB")
+	}
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		return total, err
+	}
+	data, err := io.ReadAll(io.LimitReader(r, hd.Size))
+	if err != nil {
+		return total, err
+	}
+	return total, os.WriteFile(target, data, 0o644)
 }
 
 // ReadBytes reads a file holding bytes as hex (whitespace around it ignored)
@@ -615,127 +766,166 @@ func RunVerify(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stdout, verifyUsage)
 		return 0
 	}
-	flags := map[string]string{}
-	var files, endorsementFiles []string
-	jsonOut := false
+	a, code, ok := parseVerifyArgs(args, stderr)
+	if !ok {
+		return code
+	}
+	chain, in, ref, ok := verifySetup(a, stderr)
+	if !ok {
+		return 2
+	}
+	if chain != "" {
+		return runChain(in, chain, a.flags["--path"], ref, a.jsonOut, stdout, stderr)
+	}
+	return verifyOne(a, in, ref, stdout, stderr)
+}
+
+// verifyArgs is the verify command's line once read: the flags it names, the
+// observation files and the endorsements.
+type verifyArgs struct {
+	flags            map[string]string
+	files            []string
+	endorsementFiles []string
+	jsonOut          bool
+}
+
+// parseVerifyArgs reads the line. It returns a usage exit code when the line
+// is malformed.
+func parseVerifyArgs(args []string, stderr io.Writer) (verifyArgs, int, bool) {
+	a := verifyArgs{flags: map[string]string{}}
 	for i := 0; i < len(args); i++ {
-		a := args[i]
-		if a == "--json" {
-			jsonOut = true
+		arg := args[i]
+		if arg == "--json" {
+			a.jsonOut = true
 			continue
 		}
-		name, value, hasValue := strings.Cut(a, "=")
+		name, value, hasValue := strings.Cut(arg, "=")
 		switch {
-		case !strings.HasPrefix(a, "--"):
-			files = append(files, a)
+		case !strings.HasPrefix(arg, "--"):
+			a.files = append(a.files, arg)
 			continue
 		case !hasValue && i+1 < len(args):
 			i++
 			value = args[i]
 		case !hasValue:
-			fmt.Fprintf(stderr, "fovea verify: %s needs a value\n\n%s\n", a, verifyUsage)
-			return 2
+			fmt.Fprintf(stderr, "fovea verify: %s needs a value\n\n%s\n", arg, verifyUsage)
+			return a, 2, false
 		}
 		switch name {
 		case "--endorsement":
-			endorsementFiles = append(endorsementFiles, value)
+			a.endorsementFiles = append(a.endorsementFiles, value)
 		case "--realm-key", "--realm", "--profile", "--repo", "--path", "--ref", "--chain":
-			flags[name] = value
+			a.flags[name] = value
 		default:
 			fmt.Fprintf(stderr, "fovea verify: unknown flag %s\n\n%s\n", name, verifyUsage)
-			return 2
+			return a, 2, false
 		}
 	}
+	return a, 0, true
+}
+
+// verifySetup checks the line is complete and loads what it names: the realm
+// key, the endorsements and the assessment source. It returns the chain
+// directory, empty for a single observation, and the ref the revision must be
+// in the history of.
+func verifySetup(a verifyArgs, stderr io.Writer) (string, ChainInput, string, bool) {
 	missing := []string{}
 	for _, f := range []string{"--realm-key", "--realm", "--profile", "--repo", "--path"} {
-		if flags[f] == "" {
+		if a.flags[f] == "" {
 			missing = append(missing, f)
 		}
 	}
-	if len(endorsementFiles) == 0 {
+	if len(a.endorsementFiles) == 0 {
 		missing = append(missing, "--endorsement")
 	}
-	chain := flags["--chain"]
-	if (chain == "") != (len(files) == 1) || (chain != "" && len(files) > 0) || len(missing) > 0 {
+	chain := a.flags["--chain"]
+	if (chain == "") != (len(a.files) == 1) || (chain != "" && len(a.files) > 0) || len(missing) > 0 {
 		fmt.Fprintf(stderr, "fovea verify: needs one observation or --chain, and %s\n\n%s\n", strings.Join(missing, " "), verifyUsage)
-		return 2
+		return "", ChainInput{}, "", false
 	}
-	p, err := profile.Parse(flags["--profile"])
+	p, err := profile.Parse(a.flags["--profile"])
 	if err != nil {
 		fmt.Fprintf(stderr, "fovea verify: %v\n", err)
-		return 2
+		return "", ChainInput{}, "", false
 	}
-	ref := flags["--ref"]
+	ref := a.flags["--ref"]
 	if ref == "" {
 		ref = "HEAD"
 	}
-	realmKey, err := ReadBytes(flags["--realm-key"])
+	realmKey, err := ReadBytes(a.flags["--realm-key"])
 	if err != nil {
 		fmt.Fprintf(stderr, "fovea verify: %v\n", err)
-		return 2
+		return "", ChainInput{}, "", false
 	}
-	var endorsements [][]byte
-	for _, f := range endorsementFiles {
+	endorsements, err := readEndorsements(a.endorsementFiles)
+	if err != nil {
+		fmt.Fprintf(stderr, "fovea verify: %v\n", err)
+		return "", ChainInput{}, "", false
+	}
+	in := ChainInput{Endorsements: endorsements, RealmKey: realmKey, RealmName: a.flags["--realm"], Profile: p,
+		Assessment: GitRevision(a.flags["--repo"], ref, a.flags["--path"]), NowMs: time.Now().UnixMilli()}
+	return chain, in, ref, true
+}
+
+func readEndorsements(files []string) ([][]byte, error) {
+	endorsements := make([][]byte, 0, len(files))
+	for _, f := range files {
 		e, err := ReadBytes(f)
 		if err != nil {
-			fmt.Fprintf(stderr, "fovea verify: %v\n", err)
-			return 2
+			return nil, err
 		}
 		endorsements = append(endorsements, e)
 	}
-	in := ChainInput{Endorsements: endorsements, RealmKey: realmKey, RealmName: flags["--realm"], Profile: p,
-		Assessment: GitRevision(flags["--repo"], ref, flags["--path"]), NowMs: time.Now().UnixMilli()}
-	if chain != "" {
-		return runChain(in, chain, flags["--path"], ref, jsonOut, stdout, stderr)
-	}
-	observation, err := ReadBytes(files[0])
+	return endorsements, nil
+}
+
+// verifyOne verifies a single observation and reports it.
+func verifyOne(a verifyArgs, in ChainInput, ref string, stdout, stderr io.Writer) int {
+	observation, err := ReadBytes(a.files[0])
 	if err != nil {
 		fmt.Fprintf(stderr, "fovea verify: %v\n", err)
 		return 2
 	}
 	v, refusal := verifyWithAny(in, observation)
-	if jsonOut {
-		return writeRecordJSON(stdout, files[0], v, refusal, flags["--path"], ref)
+	if a.jsonOut {
+		return writeRecordJSON(stdout, a.files[0], v, refusal, a.flags["--path"], ref)
 	}
 	if refusal != nil {
 		fmt.Fprintf(stderr, "fovea verify: %v\n", refusal)
 		return 1
 	}
-	fmt.Fprintf(stdout, "accepted: %s\n", v.State)
-	fmt.Fprintf(stdout, "  claim       %s / %s on %s\n", v.System, v.ClaimID, v.TargetAddress)
-	fmt.Fprintf(stdout, "  observer    %x\n", v.Observer)
-	fmt.Fprintf(stdout, "  assessment  %x, in the history of %s\n", v.AssessmentSHA, ref)
-	fmt.Fprintf(stdout, "  observed    %s, signed %s\n", ms(v.ObservedAt), ms(v.CreatedAt))
+	printVerified(stdout, v, ref)
+	return 0
+}
+
+func printVerified(w io.Writer, v *Verified, ref string) {
+	fmt.Fprintf(w, "accepted: %s\n", v.State)
+	fmt.Fprintf(w, "  claim       %s / %s on %s\n", v.System, v.ClaimID, v.TargetAddress)
+	fmt.Fprintf(w, "  observer    %x\n", v.Observer)
+	fmt.Fprintf(w, "  assessment  %x, in the history of %s\n", v.AssessmentSHA, ref)
+	fmt.Fprintf(w, "  observed    %s, signed %s\n", ms(v.ObservedAt), ms(v.CreatedAt))
 	if v.Chained {
-		fmt.Fprintf(stdout, "  chain       seq %d, prev %x\n", v.Seq, v.Prev)
+		fmt.Fprintf(w, "  chain       seq %d, prev %x\n", v.Seq, v.Prev)
 	}
-	gs := make([]string, 0, len(v.Outcomes))
-	for g := range v.Outcomes {
+	for _, g := range sortedGroups(v.Outcomes) {
+		fmt.Fprintf(w, "  %-20s %s\n", g, []string{"accepted", "refused", "inconclusive"}[v.Outcomes[g]])
+	}
+}
+
+func sortedGroups(m map[string]uint64) []string {
+	gs := make([]string, 0, len(m))
+	for g := range m {
 		gs = append(gs, g)
 	}
 	sort.Strings(gs)
-	for _, g := range gs {
-		fmt.Fprintf(stdout, "  %-20s %s\n", g, []string{"accepted", "refused", "inconclusive"}[v.Outcomes[g]])
-	}
-	return 0
+	return gs
 }
 
 // runChain verifies the *.hex records in dir as one slot's kept set.
 func runChain(in ChainInput, dir, path, ref string, jsonOut bool, stdout, stderr io.Writer) int {
-	files, err := filepath.Glob(filepath.Join(dir, "*.hex"))
-	if err != nil || len(files) == 0 {
-		fmt.Fprintf(stderr, "fovea verify: no *.hex records in %s\n", dir)
+	records, files, ok := readChainFiles(dir, stderr)
+	if !ok {
 		return 2
-	}
-	sort.Strings(files)
-	var records [][]byte
-	for _, f := range files {
-		b, err := ReadBytes(f)
-		if err != nil {
-			fmt.Fprintf(stderr, "fovea verify: %v\n", err)
-			return 2
-		}
-		records = append(records, b)
 	}
 	r, err := VerifyChainFiles(in, records, files)
 	if err != nil {
@@ -745,6 +935,35 @@ func runChain(in ChainInput, dir, path, ref string, jsonOut bool, stdout, stderr
 	if jsonOut {
 		return writeChainJSON(stdout, r, path, ref)
 	}
+	printChain(stdout, &r)
+	if !r.Continuous {
+		return 1
+	}
+	return 0
+}
+
+// readChainFiles reads every *.hex record of one slot, in file name order; the
+// names travel with the bytes, so a verdict can name the file it came from.
+func readChainFiles(dir string, stderr io.Writer) ([][]byte, []string, bool) {
+	files, err := filepath.Glob(filepath.Join(dir, "*.hex"))
+	if err != nil || len(files) == 0 {
+		fmt.Fprintf(stderr, "fovea verify: no *.hex records in %s\n", dir)
+		return nil, nil, false
+	}
+	sort.Strings(files)
+	records := make([][]byte, 0, len(files))
+	for _, f := range files {
+		b, err := ReadBytes(f)
+		if err != nil {
+			fmt.Fprintf(stderr, "fovea verify: %v\n", err)
+			return nil, nil, false
+		}
+		records = append(records, b)
+	}
+	return records, files, true
+}
+
+func printChain(stdout io.Writer, r *ChainReport) {
 	verdict := "not continuous"
 	if r.Continuous {
 		verdict = "continuous"
@@ -764,11 +983,7 @@ func runChain(in ChainInput, dir, path, ref string, jsonOut bool, stdout, stderr
 		}
 	}
 	for _, g := range r.C1 {
-		if g.From == g.To {
-			fmt.Fprintf(stdout, "  C1 gap: seq %d\n", g.From)
-		} else {
-			fmt.Fprintf(stdout, "  C1 gap: seq %d to %d\n", g.From, g.To)
-		}
+		printGap(stdout, g)
 	}
 	for _, hole := range r.Holes {
 		fmt.Fprintf(stdout, "  C6 restart: %s\n", hole)
@@ -776,10 +991,14 @@ func runChain(in ChainInput, dir, path, ref string, jsonOut bool, stdout, stderr
 	if r.NotEveryResult {
 		fmt.Fprintln(stdout, "  a revision's policy.publish is not every_result: continuity is not claimed")
 	}
-	if !r.Continuous {
-		return 1
+}
+
+func printGap(w io.Writer, g Gap) {
+	if g.From == g.To {
+		fmt.Fprintf(w, "  C1 gap: seq %d\n", g.From)
+		return
 	}
-	return 0
+	fmt.Fprintf(w, "  C1 gap: seq %d to %d\n", g.From, g.To)
 }
 
 func joinSeqs(seqs []uint64) string {

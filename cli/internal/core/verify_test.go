@@ -196,16 +196,18 @@ func chainInput(t *testing.T, repo string) ChainInput {
 		Profile: in.Profile, Assessment: in.Assessment, NowMs: in.NowMs}
 }
 
+// chainFindings is the whole report of C1 to C7, as one comparable value.
+type chainFindings struct {
+	c1                 []Gap
+	c2, c3, c4, c5, c7 []uint64
+	c6                 int
+}
+
 // Each chain case of spec v0.5 section 15 is reported as exactly its own
 // findings and no other: own is the whole report of C1 to C7.
 func TestChainFindings(t *testing.T) {
 	repo := fixtureRepo(t)
-	type findings struct {
-		c1                 []Gap
-		c2, c3, c4, c5, c7 []uint64
-		c6                 int
-	}
-	cases := map[string]findings{
+	cases := map[string]chainFindings{
 		"continuous":      {},
 		"duplicate":       {},
 		"with_unchained":  {},
@@ -224,16 +226,22 @@ func TestChainFindings(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			got := findings{c1: r.C1, c2: r.C2, c3: r.C3, c4: r.C4, c5: r.C5, c7: r.C7, c6: r.C6}
+			got := chainFindings{c1: r.C1, c2: r.C2, c3: r.C3, c4: r.C4, c5: r.C5, c7: r.C7, c6: r.C6}
 			if fmt.Sprint(got) != fmt.Sprint(want) {
 				t.Fatalf("findings %+v, want %+v", got, want)
 			}
-			clean := fmt.Sprint(want) == fmt.Sprint(findings{})
+			clean := fmt.Sprint(want) == fmt.Sprint(chainFindings{})
 			if r.Continuous != clean || len(r.Refused) != 0 {
 				t.Fatalf("continuous %v, refused %v, want continuous %v", r.Continuous, r.Refused, clean)
 			}
 		})
 	}
+}
+
+// TestChainTotals covers what a kept set counts: the records accepted, the
+// first and last seq, a record kept twice, an unchained v0.4 record.
+func TestChainTotals(t *testing.T) {
+	repo := fixtureRepo(t)
 	r, _ := VerifyChain(chainInput(t, repo), chainRecords(t, "continuous"))
 	if r.Accepted != 5 || r.FirstSeq != 0 || r.LastSeq != 4 {
 		t.Fatalf("continuous: %+v", r)

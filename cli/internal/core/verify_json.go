@@ -183,6 +183,22 @@ func writeChainJSON(w io.Writer, r ChainReport, path, ref string) int {
 	for _, g := range r.C1 {
 		out.Gaps = append(out.Gaps, gapJSON{From: g.From, To: g.To})
 	}
+	out.Forks = forksJSON(r)
+	for _, hole := range r.Holes {
+		out.Restarts = append(out.Restarts, restartJSON{Seq: 0, Detail: hole})
+	}
+	out.Refusals = refusalsJSON(r)
+	out.Items = itemsJSON(r, path, ref)
+	writeJSON(w, out)
+	if r.Continuous {
+		return 0
+	}
+	return 1
+}
+
+// forksJSON names each forked seq with the hashes of the records claiming it.
+func forksJSON(r ChainReport) []forkJSON {
+	out := []forkJSON{}
 	for _, seq := range dedupe(r.C2) {
 		f := forkJSON{Seq: seq, Hashes: []string{}}
 		for _, v := range r.Items {
@@ -190,22 +206,25 @@ func writeChainJSON(w io.Writer, r ChainReport, path, ref string) int {
 				f.Hashes = append(f.Hashes, hex.EncodeToString(v.WireHash[:]))
 			}
 		}
-		out.Forks = append(out.Forks, f)
+		out = append(out, f)
 	}
-	for _, hole := range r.Holes {
-		out.Restarts = append(out.Restarts, restartJSON{Seq: 0, Detail: hole})
-	}
+	return out
+}
+
+func refusalsJSON(r ChainReport) []fileRefusalJSON {
+	out := []fileRefusalJSON{}
 	for _, f := range r.Refusals {
-		out.Refusals = append(out.Refusals, fileRefusalJSON{File: filepath.Base(f.File), Step: f.Refusal.Step, Reason: f.Refusal.Reason})
+		out = append(out, fileRefusalJSON{File: filepath.Base(f.File), Step: f.Refusal.Step, Reason: f.Refusal.Reason})
 	}
+	return out
+}
+
+func itemsJSON(r ChainReport, path, ref string) []*recordJSON {
+	out := []*recordJSON{}
 	for _, v := range r.Items {
-		out.Items = append(out.Items, recordOf(filepath.Base(v.File), v, path, ref))
+		out = append(out, recordOf(filepath.Base(v.File), v, path, ref))
 	}
-	writeJSON(w, out)
-	if r.Continuous {
-		return 0
-	}
-	return 1
+	return out
 }
 
 func seqsJSON(seqs []uint64) []seqJSON {

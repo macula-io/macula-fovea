@@ -265,22 +265,42 @@ func lintHeaderColumns(h *Header) []Finding {
 	}
 	declaredIn := map[string]string{}
 	for _, fam := range families {
-		for _, col := range h.Columns[fam] {
-			if prev, dup := declaredIn[col]; dup {
-				f = append(f, errf(ruleGridColumnDuplicate, "fovea.yaml", "column %q is declared more than once (columns.%s and columns.%s)", col, prev, fam))
-				continue
-			}
-			declaredIn[col] = fam
-			if extensionColumn.MatchString(col) || contains(specColumns[fam], col) {
-				continue
-			}
-			if home := specFamilyOf(col); home != "" {
-				f = append(f, errf(ruleGridColumnWrongFamily, "fovea.yaml", "column %q belongs to columns.%s, not columns.%s", col, home, fam))
-				continue
-			}
-			f = append(f, errf(ruleGridColumnUnknown, "fovea.yaml", "column %q in columns.%s is not a spec column; extensions need the x_ prefix", col, fam))
-		}
+		f = append(f, lintColumnFamily(fam, h.Columns[fam], declaredIn)...)
 	}
+	return append(f, lintMissingSpecColumns(declaredIn)...)
+}
+
+// lintColumnFamily checks the declared columns of one family and records where
+// each column was declared, so duplicates across families are caught.
+func lintColumnFamily(fam string, cols []string, declaredIn map[string]string) []Finding {
+	var f []Finding
+	for _, col := range cols {
+		if prev, dup := declaredIn[col]; dup {
+			f = append(f, errf(ruleGridColumnDuplicate, "fovea.yaml", "column %q is declared more than once (columns.%s and columns.%s)", col, prev, fam))
+			continue
+		}
+		declaredIn[col] = fam
+		f = append(f, lintColumnPlacement(fam, col)...)
+	}
+	return f
+}
+
+// lintColumnPlacement says whether one column belongs in the family it was
+// declared under: a spec column of that family, an x_ extension, or nothing.
+func lintColumnPlacement(fam, col string) []Finding {
+	if extensionColumn.MatchString(col) || contains(specColumns[fam], col) {
+		return nil
+	}
+	if home := specFamilyOf(col); home != "" {
+		return []Finding{errf(ruleGridColumnWrongFamily, "fovea.yaml", "column %q belongs to columns.%s, not columns.%s", col, home, fam)}
+	}
+	return []Finding{errf(ruleGridColumnUnknown, "fovea.yaml", "column %q in columns.%s is not a spec column; extensions need the x_ prefix", col, fam)}
+}
+
+// lintMissingSpecColumns is the other direction: the fixed grid is fixed, so
+// every spec column must be declared.
+func lintMissingSpecColumns(declaredIn map[string]string) []Finding {
+	var f []Finding
 	for _, fam := range families {
 		for _, col := range specColumns[fam] {
 			if _, ok := declaredIn[col]; !ok {
@@ -304,18 +324,11 @@ func specFamilyOf(col string) string {
 // under core, only possession and utility under enabled, and a written
 // justification for each extension left disabled.
 func lintHeaderAttributes(h *Header) []Finding {
-	var f []Finding
 	a := h.Attributes
 	seen := map[string]bool{}
+	var f []Finding
 	for _, x := range a.Core {
-		switch {
-		case seen[x]:
-			f = append(f, errf(ruleGridAttributeDuplicate, "fovea.yaml", "attribute %q is listed more than once", x))
-		case contains(extensionAttributes, x):
-			f = append(f, errf(ruleGridCoreAttributeInvalid, "fovea.yaml", "%q is an extension, not a core attribute; list it under attributes.enabled", x))
-		case !contains(coreFive, x):
-			f = append(f, errf(ruleGridAttributeUnknown, "fovea.yaml", "attribute %q in attributes.core is not a spec attribute", x))
-		}
+		f = append(f, lintCoreAttribute(x, seen[x])...)
 		seen[x] = true
 	}
 	for _, req := range coreFive {
@@ -324,12 +337,7 @@ func lintHeaderAttributes(h *Header) []Finding {
 		}
 	}
 	for _, x := range a.Enabled {
-		switch {
-		case seen[x]:
-			f = append(f, errf(ruleGridAttributeDuplicate, "fovea.yaml", "attribute %q is listed more than once", x))
-		case !contains(extensionAttributes, x):
-			f = append(f, errf(ruleGridAttributeUnknown, "fovea.yaml", "attribute %q in attributes.enabled is not an extension (possession, utility)", x))
-		}
+		f = append(f, lintEnabledAttribute(x, seen[x])...)
 		seen[x] = true
 	}
 	for x := range a.DisabledJustifications {
@@ -338,15 +346,44 @@ func lintHeaderAttributes(h *Header) []Finding {
 		}
 	}
 	for _, x := range extensionAttributes {
-		reason := strings.TrimSpace(a.DisabledJustifications[x])
-		switch {
-		case contains(a.Enabled, x) && reason != "":
-			f = append(f, errf(ruleGridExtensionContradiction, "fovea.yaml", "extension %q is enabled and also justified as disabled", x))
-		case !contains(a.Enabled, x) && reason == "":
-			f = append(f, errf(ruleGridExtensionUnjustified, "fovea.yaml", "extension %q is disabled without a written justification in attributes.disabled_justifications", x))
-		}
+		f = append(f, lintExtension(x, contains(a.Enabled, x), a.DisabledJustifications[x])...)
 	}
 	return f
+}
+
+func lintCoreAttribute(x string, duplicate bool) []Finding {
+	switch {
+	case duplicate:
+		return []Finding{errf(ruleGridAttributeDuplicate, "fovea.yaml", "attribute %q is listed more than once", x)}
+	case contains(extensionAttributes, x):
+		return []Finding{errf(ruleGridCoreAttributeInvalid, "fovea.yaml", "%q is an extension, not a core attribute; list it under attributes.enabled", x)}
+	case !contains(coreFive, x):
+		return []Finding{errf(ruleGridAttributeUnknown, "fovea.yaml", "attribute %q in attributes.core is not a spec attribute", x)}
+	}
+	return nil
+}
+
+func lintEnabledAttribute(x string, duplicate bool) []Finding {
+	switch {
+	case duplicate:
+		return []Finding{errf(ruleGridAttributeDuplicate, "fovea.yaml", "attribute %q is listed more than once", x)}
+	case !contains(extensionAttributes, x):
+		return []Finding{errf(ruleGridAttributeUnknown, "fovea.yaml", "attribute %q in attributes.enabled is not an extension (possession, utility)", x)}
+	}
+	return nil
+}
+
+// lintExtension checks one extension attribute: it is either enabled, or
+// disabled with a written justification: not both, and not neither.
+func lintExtension(x string, enabled bool, justification string) []Finding {
+	reason := strings.TrimSpace(justification)
+	switch {
+	case enabled && reason != "":
+		return []Finding{errf(ruleGridExtensionContradiction, "fovea.yaml", "extension %q is enabled and also justified as disabled", x)}
+	case !enabled && reason == "":
+		return []Finding{errf(ruleGridExtensionUnjustified, "fovea.yaml", "extension %q is disabled without a written justification in attributes.disabled_justifications", x)}
+	}
+	return nil
 }
 
 // LoadCells parses every cell present in the cells dir; returns cells by id,

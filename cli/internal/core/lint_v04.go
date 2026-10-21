@@ -98,67 +98,115 @@ func lintV04(h *Header, cells map[string]*Cell) []Finding {
 	}
 	f = append(f, lintTargets(h)...)
 	f = append(f, lintPolicy(h)...)
-	claims := map[string][]string{} // valid claim id -> cell ids, one per declaration
-	declared := map[string]bool{}   // every claim a probe declares, valid or not
-	probes := 0
-	for _, id := range sortedIDs(cells) {
+	ci := claimIndex{declared: map[string]bool{}, perClaim: map[string][]string{}}
+	f = append(f, lintProbes(h, sortedIDs(cells), cells, &ci)...)
+	f = append(f, ci.duplicates()...)
+	return append(f, lintPolicyClaims(h, &ci)...)
+}
+
+// claimIndex is what the probe declarations say: every claim declared (valid
+// or not), the cell ids per valid claim, and how many probe declarations there
+// are at all.
+type claimIndex struct {
+	declared map[string]bool
+	perClaim map[string][]string
+	probes   int
+}
+
+func (ci *claimIndex) add(id string, e Evidence) {
+	if e.Kind != "probe" {
+		return
+	}
+	ci.probes++
+	ci.declared[e.Claim] = true
+	if claimID.MatchString(e.Claim) {
+		ci.perClaim[e.Claim] = append(ci.perClaim[e.Claim], id)
+	}
+}
+
+// duplicates reports every cell whose claim id is declared more than once: an
+// observation must name one declaration.
+func (ci *claimIndex) duplicates() []Finding {
+	var f []Finding
+	for claim, ids := range ci.perClaim {
+		if len(ids) < 2 {
+			continue
+		}
+		for _, id := range ids {
+			f = append(f, errf(ruleClaimIDDuplicate, id, "claim %q is declared %d times; an observation must name one declaration", claim, len(ids)))
+		}
+	}
+	return f
+}
+
+// lintProbes walks the cells: the evidence rules, the executable-evidence rule
+// for an assessed cell, and the probe declarations the policy is checked
+// against.
+func lintProbes(h *Header, ids []string, cells map[string]*Cell, ci *claimIndex) []Finding {
+	var f []Finding
+	for _, id := range ids {
 		c := cells[id]
 		executable := false
 		for _, m := range allMeasures(c) {
 			for _, e := range m.Evidence {
 				f = append(f, lintEvidence(h, id, e)...)
 				executable = executable || executableEvidence[e.Kind]
-				if e.Kind != "probe" {
-					continue
-				}
-				probes++
-				declared[e.Claim] = true
-				if claimID.MatchString(e.Claim) {
-					claims[e.Claim] = append(claims[e.Claim], id)
-				}
+				ci.add(id, e)
 			}
 		}
 		if c.Status == "assessed" && !executable {
 			f = append(f, errf(ruleAssessedWithoutExecutableEvidence, id, "status assessed but no measure carries test, scenario or probe evidence"))
 		}
 	}
-	for claim, ids := range claims {
-		if len(ids) > 1 {
-			for _, id := range ids {
-				f = append(f, errf(ruleClaimIDDuplicate, id, "claim %q is declared %d times; an observation must name one declaration", claim, len(ids)))
-			}
+	return f
+}
+
+// lintPolicyClaims checks the policy against what the probes declare: probes
+// need a policy at all, a suspended claim must be one a probe declares, and an
+// observer must be a node id that is not a declared station.
+func lintPolicyClaims(h *Header, ci *claimIndex) []Finding {
+	if h.Policy == nil {
+		if ci.probes > 0 {
+			return []Finding{errf(rulePolicyMissing, "fovea.yaml", "probe declarations need a policy saying what an observer may publish and who observes")}
+		}
+		return nil
+	}
+	var f []Finding
+	// A suspended claim that a probe declares, even under an invalid id,
+	// is reported once, at the declaration (claim_id_invalid).
+	for _, s := range h.Policy.Suspended {
+		if !ci.declared[s] {
+			f = append(f, errf(rulePolicySuspendedUnknownClaim, "fovea.yaml", "policy.suspended names %q, which no probe declaration claims", s))
 		}
 	}
-	if h.Policy == nil && probes > 0 {
-		f = append(f, errf(rulePolicyMissing, "fovea.yaml", "probe declarations need a policy saying what an observer may publish and who observes"))
+	if ci.probes > 0 && len(h.Policy.Observers) == 0 {
+		f = append(f, errf(rulePolicyObserverInvalid, "fovea.yaml", "policy.observers names no observer: a verifier could not tell this assessment's observations from any realm member's"))
 	}
-	if h.Policy != nil {
-		// A suspended claim that a probe declares, even under an invalid id,
-		// is reported once, at the declaration (claim_id_invalid).
-		for _, s := range h.Policy.Suspended {
-			if !declared[s] {
-				f = append(f, errf(rulePolicySuspendedUnknownClaim, "fovea.yaml", "policy.suspended names %q, which no probe declaration claims", s))
-			}
-		}
-		if probes > 0 && len(h.Policy.Observers) == 0 {
-			f = append(f, errf(rulePolicyObserverInvalid, "fovea.yaml", "policy.observers names no observer: a verifier could not tell this assessment's observations from any realm member's"))
-		}
-		stations := map[string]bool{}
-		for _, t := range h.Targets {
-			for _, st := range t.Stations {
-				stations[st.NodeID] = true
-			}
-		}
-		for _, o := range h.Policy.Observers {
-			switch {
-			case !nodeID.MatchString(o):
-				f = append(f, errf(rulePolicyObserverInvalid, "fovea.yaml", "policy.observers entry %q is not a node id (64 lowercase hex digits)", o))
-			case stations[o]:
-				f = append(f, errf(rulePolicyObserverInvalid, "fovea.yaml", "policy.observers entry %q is a declared station: a station cannot observe itself", o))
-			}
-		}
+	stations := declaredStations(h)
+	for _, o := range h.Policy.Observers {
+		f = append(f, lintObserver(o, stations)...)
 	}
 	return f
+}
+
+func declaredStations(h *Header) map[string]bool {
+	stations := map[string]bool{}
+	for _, t := range h.Targets {
+		for _, st := range t.Stations {
+			stations[st.NodeID] = true
+		}
+	}
+	return stations
+}
+
+func lintObserver(o string, stations map[string]bool) []Finding {
+	switch {
+	case !nodeID.MatchString(o):
+		return []Finding{errf(rulePolicyObserverInvalid, "fovea.yaml", "policy.observers entry %q is not a node id (64 lowercase hex digits)", o)}
+	case stations[o]:
+		return []Finding{errf(rulePolicyObserverInvalid, "fovea.yaml", "policy.observers entry %q is a declared station: a station cannot observe itself", o)}
+	}
+	return nil
 }
 
 func lintFieldsBeforeV04(h *Header, cells map[string]*Cell) []Finding {

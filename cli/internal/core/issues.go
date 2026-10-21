@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 )
@@ -86,7 +85,6 @@ func isOverdue(c *Cell, today time.Time) bool {
 
 // RunIssues executes `fovea issues`. Exit 1 on --check failures or errors.
 func RunIssues(o IssuesOpts, stdout, stderr io.Writer) int {
-	w := stdout
 	h, hf, err := LoadHeader(o.Dir)
 	if err != nil {
 		fmt.Fprintln(stderr, err)
@@ -102,36 +100,14 @@ func RunIssues(o IssuesOpts, stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	roadmap := map[string]*Cell{}
-	for id, c := range cells {
-		if c.Status == "roadmap" {
-			roadmap[id] = c
-		}
-	}
+	roadmap := roadmapCells(cells)
 
-	owner, repo := "owner", "repo"
-	if o.Repo != "" {
-		parts := strings.SplitN(o.Repo, "/", 2)
-		if len(parts) != 2 {
-			fmt.Fprintf(stderr, "--repo must be owner/repo, got %q\n", o.Repo)
-			return 1
-		}
-		owner, repo = parts[0], parts[1]
-	} else {
-		owner, repo, err = DetectRepo(o.Dir)
-		if err != nil {
-			fmt.Fprintf(stderr, "detect repo: %v (use --repo owner/name)\n", err)
-			return 1
-		}
+	owner, repo, ok := resolveRepo(o, stderr)
+	if !ok {
+		return 1
 	}
-
-	token := o.Token
-	if token == "" {
-		token = os.Getenv("GITHUB_TOKEN")
-	}
-	if token == "" && !o.DryRun {
-		// A missing CI secret must fail the job, not pass as a no-op.
-		fmt.Fprintln(stderr, "fovea issues: no token (set GITHUB_TOKEN or --token); use --dry-run to compute decisions without one")
+	token, ok := resolveToken(o, stderr)
+	if !ok {
 		return 1
 	}
 
@@ -139,36 +115,84 @@ func RunIssues(o IssuesOpts, stdout, stderr io.Writer) int {
 	if o.APIBase != "" {
 		g.base = o.APIBase
 	}
-	existing := map[string]Issue{}
-	listed := false
-	if token == "" {
-		// Only reachable with --dry-run: the "would open" lines below are
-		// computed against an empty tracker, and the reader must know it.
-		fmt.Fprintln(stderr, "no token: existing issues not consulted; decisions assume none exist")
-	}
-	if token != "" {
-		issues, err := g.ListIssues(markerLabel)
-		if err != nil {
-			if o.DryRun {
-				fmt.Fprintf(stderr, "(dry-run) list issues: %v; proceeding without reconciliation\n", err)
-			} else {
-				fmt.Fprintf(stderr, "list issues: %v\n", err)
-				return 1
-			}
-		} else {
-			listed = true
-			for _, iss := range issues {
-				if id := cellIDFromBody(iss.Body); id != "" {
-					existing[id] = iss
-				}
-			}
-		}
+	existing, listed, ok := listExisting(g, token, o.DryRun, stderr)
+	if !ok {
+		return 1
 	}
 
 	if o.Check {
-		return issuesCheck(w, stderr, roadmap, existing, listed)
+		return issuesCheck(stdout, stderr, roadmap, existing, listed)
 	}
-	return issuesSync(w, stderr, o, h, roadmap, existing, g, owner, repo)
+	return issuesSync(stdout, stderr, o, h, roadmap, existing, g, owner, repo)
+}
+
+func roadmapCells(cells map[string]*Cell) map[string]*Cell {
+	roadmap := map[string]*Cell{}
+	for id, c := range cells {
+		if c.Status == "roadmap" {
+			roadmap[id] = c
+		}
+	}
+	return roadmap
+}
+
+// resolveRepo picks the owner/repo to sync against: the --repo override, or
+// the repository's own git remote.
+func resolveRepo(o IssuesOpts, stderr io.Writer) (string, string, bool) {
+	if o.Repo == "" {
+		owner, repo, err := DetectRepo(o.Dir)
+		if err != nil {
+			fmt.Fprintf(stderr, "detect repo: %v (use --repo owner/name)\n", err)
+			return "", "", false
+		}
+		return owner, repo, true
+	}
+	parts := strings.SplitN(o.Repo, "/", 2)
+	if len(parts) != 2 {
+		fmt.Fprintf(stderr, "--repo must be owner/repo, got %q\n", o.Repo)
+		return "", "", false
+	}
+	return parts[0], parts[1], true
+}
+
+// resolveToken finds the API token. A missing CI secret must fail the job, not
+// pass as a no-op; --dry-run is the one mode that runs without one.
+func resolveToken(o IssuesOpts, stderr io.Writer) (string, bool) {
+	token := o.Token
+	if token == "" {
+		token = os.Getenv("GITHUB_TOKEN")
+	}
+	if token == "" && !o.DryRun {
+		fmt.Fprintln(stderr, "fovea issues: no token (set GITHUB_TOKEN or --token); use --dry-run to compute decisions without one")
+		return "", false
+	}
+	return token, true
+}
+
+// listExisting reads the open fovea issues so sync can reconcile against them.
+// Without a token (dry-run only) the "would open" lines are computed against
+// an empty tracker, and the reader is told so.
+func listExisting(g *GH, token string, dryRun bool, stderr io.Writer) (map[string]Issue, bool, bool) {
+	existing := map[string]Issue{}
+	if token == "" {
+		fmt.Fprintln(stderr, "no token: existing issues not consulted; decisions assume none exist")
+		return existing, false, true
+	}
+	issues, err := g.ListIssues(markerLabel)
+	if err != nil {
+		if !dryRun {
+			fmt.Fprintf(stderr, "list issues: %v\n", err)
+			return existing, false, false
+		}
+		fmt.Fprintf(stderr, "(dry-run) list issues: %v; proceeding without reconciliation\n", err)
+		return existing, false, true
+	}
+	for _, iss := range issues {
+		if id := cellIDFromBody(iss.Body); id != "" {
+			existing[id] = iss
+		}
+	}
+	return existing, true, true
 }
 
 // issuesCheck is the anti-theater trap: a roadmap cell whose linked issue is
@@ -197,70 +221,26 @@ func issuesCheck(w, stderr io.Writer, roadmap map[string]*Cell, existing map[str
 
 func issuesSync(w, stderr io.Writer, o IssuesOpts, h *Header, roadmap map[string]*Cell, existing map[string]Issue, g *GH, owner, repo string) int {
 	today := time.Now()
-	ids := make([]string, 0, len(roadmap))
-	for id := range roadmap {
-		ids = append(ids, id)
-	}
-	sort.Strings(ids)
-
-	opened, updated, closed, untouched := 0, 0, 0, 0
 
 	// Cells that moved off roadmap: close their issues.
-	for id, iss := range existing {
-		if _, still := roadmap[id]; !still && iss.State == "open" {
-			if o.DryRun {
-				fmt.Fprintf(w, "would close #%d (cell %s no longer roadmap)\n", iss.Number, id)
-			} else {
-				if _, err := g.CloseIssue(iss.Number); err != nil {
-					fmt.Fprintf(stderr, "close #%d: %v\n", iss.Number, err)
-					return 1
-				}
-				fmt.Fprintf(w, "closed #%d (cell %s no longer roadmap)\n", iss.Number, id)
-			}
-			closed++
-		}
+	closed, ok := closeDeparted(w, stderr, o, roadmap, existing, g)
+	if !ok {
+		return 1
 	}
-
-	for _, id := range ids {
-		c := roadmap[id]
-		overdue := isOverdue(c, today)
-		cellPath := filepath.Join(o.Dir, h.CellsDir, c.ID+".yaml")
-		body := issueBody(c, cellPath)
-		labels := labelsFor(c, overdue)
-
+	opened, updated, untouched := 0, 0, 0
+	for _, id := range sortedIDs(roadmap) {
 		iss, exists := existing[id]
-		switch {
-		case !exists:
-			if o.DryRun {
-				fmt.Fprintf(w, "would open: %s (%s)\n", id, labelsString(labels))
-			} else {
-				created, err := g.CreateIssue(issueTitle(c), body, labels)
-				if err != nil {
-					fmt.Fprintf(stderr, "create %s: %v\n", id, err)
-					return 1
-				}
-				fmt.Fprintf(w, "opened #%d: %s\n", created.Number, id)
-			}
+		outcome, ok := syncCell(w, stderr, o, h, roadmap[id], iss, exists, g, today)
+		if !ok {
+			return 1
+		}
+		switch outcome {
+		case "opened":
 			opened++
-		case iss.State == "closed":
-			fmt.Fprintf(w, "untouched #%d (%s): closed but cell still roadmap; run: fovea issues --check\n", iss.Number, id)
-			untouched++
+		case "updated":
+			updated++
 		default:
-			changed := iss.Body != body || !sameLabels(iss, labels)
-			if changed {
-				if o.DryRun {
-					fmt.Fprintf(w, "would update #%d (%s): %s\n", iss.Number, id, labelsString(labels))
-				} else {
-					if _, err := g.UpdateIssue(iss.Number, body, labels); err != nil {
-						fmt.Fprintf(stderr, "update #%d: %v\n", iss.Number, err)
-						return 1
-					}
-					fmt.Fprintf(w, "updated #%d (%s): %s\n", iss.Number, id, labelsString(labels))
-				}
-				updated++
-			} else {
-				untouched++
-			}
+			untouched++
 		}
 	}
 
@@ -271,6 +251,84 @@ func issuesSync(w, stderr io.Writer, o IssuesOpts, h *Header, roadmap map[string
 	fmt.Fprintf(w, "fovea issues %s, %s/%s: %d opened, %d updated, %d closed, %d untouched\n",
 		mode, owner, repo, opened, updated, closed, untouched)
 	return 0
+}
+
+// closeDeparted closes the issues of cells that are no longer roadmap.
+func closeDeparted(w, stderr io.Writer, o IssuesOpts, roadmap map[string]*Cell, existing map[string]Issue, g *GH) (int, bool) {
+	closed := 0
+	for id, iss := range existing {
+		if _, still := roadmap[id]; still || iss.State != "open" {
+			continue
+		}
+		if err := closeIssue(w, stderr, o, id, iss.Number, g); err != nil {
+			return closed, false
+		}
+		closed++
+	}
+	return closed, true
+}
+
+func closeIssue(w, stderr io.Writer, o IssuesOpts, id string, num int, g *GH) error {
+	if o.DryRun {
+		fmt.Fprintf(w, "would close #%d (cell %s no longer roadmap)\n", num, id)
+		return nil
+	}
+	if _, err := g.CloseIssue(num); err != nil {
+		fmt.Fprintf(stderr, "close #%d: %v\n", num, err)
+		return err
+	}
+	fmt.Fprintf(w, "closed #%d (cell %s no longer roadmap)\n", num, id)
+	return nil
+}
+
+// syncCell reconciles one roadmap cell with the issue that tracks it, and
+// names what happened: "opened", "updated" or "untouched".
+func syncCell(w, stderr io.Writer, o IssuesOpts, h *Header, c *Cell, iss Issue, exists bool, g *GH, today time.Time) (string, bool) {
+	body := issueBody(c, filepath.Join(o.Dir, h.CellsDir, c.ID+".yaml"))
+	labels := labelsFor(c, isOverdue(c, today))
+	switch {
+	case !exists:
+		if err := openIssue(w, stderr, o, c, g, body, labels); err != nil {
+			return "", false
+		}
+		return "opened", true
+	case iss.State == "closed":
+		fmt.Fprintf(w, "untouched #%d (%s): closed but cell still roadmap; run: fovea issues --check\n", iss.Number, c.ID)
+		return "untouched", true
+	case iss.Body != body || !sameLabels(iss, labels):
+		if err := updateIssue(w, stderr, o, c.ID, iss.Number, g, body, labels); err != nil {
+			return "", false
+		}
+		return "updated", true
+	}
+	return "untouched", true
+}
+
+func openIssue(w, stderr io.Writer, o IssuesOpts, c *Cell, g *GH, body string, labels []string) error {
+	if o.DryRun {
+		fmt.Fprintf(w, "would open: %s (%s)\n", c.ID, labelsString(labels))
+		return nil
+	}
+	created, err := g.CreateIssue(issueTitle(c), body, labels)
+	if err != nil {
+		fmt.Fprintf(stderr, "create %s: %v\n", c.ID, err)
+		return err
+	}
+	fmt.Fprintf(w, "opened #%d: %s\n", created.Number, c.ID)
+	return nil
+}
+
+func updateIssue(w, stderr io.Writer, o IssuesOpts, id string, num int, g *GH, body string, labels []string) error {
+	if o.DryRun {
+		fmt.Fprintf(w, "would update #%d (%s): %s\n", num, id, labelsString(labels))
+		return nil
+	}
+	if _, err := g.UpdateIssue(num, body, labels); err != nil {
+		fmt.Fprintf(stderr, "update #%d: %v\n", num, err)
+		return err
+	}
+	fmt.Fprintf(w, "updated #%d (%s): %s\n", num, id, labelsString(labels))
+	return nil
 }
 
 func hasLabel(iss Issue, name string) bool {

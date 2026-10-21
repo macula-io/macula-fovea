@@ -74,27 +74,32 @@ func rollV02(h *Header, cells map[string]*Cell) Roll {
 	for _, a := range attrs {
 		row := map[string]string{}
 		for _, fam := range families {
-			worst := -1
-			anyCol := false
-			for _, c := range cols {
-				if h.FamilyOf(c) != fam {
-					continue
-				}
-				anyCol = true
-				if r := ragRank(cellRAG(cells[c+"."+a])); r > worst {
-					worst = r
-				}
-			}
-			if !anyCol {
-				row[fam] = "·"
-			} else {
-				row[fam] = ragLetter(worst)
-			}
+			row[fam] = blockV02(h, cells, cols, a, fam)
 		}
 		r.Grid[a] = row
 	}
 	fillRollups(&r, attrs, r.Grid)
 	return r
+}
+
+// blockV02 is the worst RAG of one attribute's block in one family, "·" when
+// the header declares no column for that family.
+func blockV02(h *Header, cells map[string]*Cell, cols []string, attr, fam string) string {
+	worst := -1
+	anyCol := false
+	for _, c := range cols {
+		if h.FamilyOf(c) != fam {
+			continue
+		}
+		anyCol = true
+		if r := ragRank(cellRAG(cells[c+"."+attr])); r > worst {
+			worst = r
+		}
+	}
+	if !anyCol {
+		return "·"
+	}
+	return ragLetter(worst)
 }
 
 func renderV02(w io.Writer, h *Header, cells map[string]*Cell, jsonOut bool) {
@@ -153,38 +158,7 @@ func rollV03(h *Header, cells map[string]*Cell, headerErrs []Finding, today time
 		row := map[string]string{}
 		cov := map[string]string{}
 		for _, fam := range families {
-			worst := -1
-			done, total := 0, 0
-			for _, c := range cols {
-				if h.FamilyOf(c) != fam {
-					continue
-				}
-				total++
-				cell := cells[c+"."+a]
-				if authored(cell) {
-					done++
-				}
-				rg := cellRAGv03(cell)
-				if rg == ragGrey {
-					continue // justified N/A: no threat surface, must not drag the block down
-				}
-				if rk := ragRank(rg); rk > worst {
-					worst = rk
-				}
-			}
-			switch {
-			case total == 0:
-				row[fam] = "·"
-				cov[fam] = "·"
-			case worst == -1:
-				// every cell in the block is a justified N/A
-				row[fam] = fmt.Sprintf("- %d/%d", done, total)
-				cov[fam] = fmt.Sprintf("%d/%d", done, total)
-			default:
-				// Worst-RAG stays: one unfinished cell keeps the block red.
-				row[fam] = fmt.Sprintf("%s %d/%d", ragLetter(worst), done, total)
-				cov[fam] = fmt.Sprintf("%d/%d", done, total)
-			}
+			row[fam], cov[fam] = blockV03(h, cells, cols, a, fam)
 		}
 		r.GridV03[a] = row
 		r.Coverage[a] = cov
@@ -193,6 +167,40 @@ func rollV03(h *Header, cells map[string]*Cell, headerErrs []Finding, today time
 	r.OpenGaps = openGaps(h, cells, headerErrs, today)
 	r.MetricsNote = "RAG = worst cell in the block (invariant); n/total = authored cells; - = all cells justified N/A. Open gaps listed below carry the unfinished work."
 	return r
+}
+
+// blockV03 is one block of the v0.3 grid: the rendered cell and its coverage
+// string. Worst-RAG stays the invariant, so one unfinished cell keeps the
+// block red; a justified N/A never drags it down.
+func blockV03(h *Header, cells map[string]*Cell, cols []string, attr, fam string) (string, string) {
+	worst := -1
+	done, total := 0, 0
+	for _, c := range cols {
+		if h.FamilyOf(c) != fam {
+			continue
+		}
+		total++
+		cell := cells[c+"."+attr]
+		if authored(cell) {
+			done++
+		}
+		rg := cellRAGv03(cell)
+		if rg == ragGrey {
+			continue // justified N/A: no threat surface, must not drag the block down
+		}
+		if rk := ragRank(rg); rk > worst {
+			worst = rk
+		}
+	}
+	switch {
+	case total == 0:
+		return "·", "·"
+	case worst == -1:
+		// every cell in the block is a justified N/A
+		return fmt.Sprintf("- %d/%d", done, total), fmt.Sprintf("%d/%d", done, total)
+	default:
+		return fmt.Sprintf("%s %d/%d", ragLetter(worst), done, total), fmt.Sprintf("%d/%d", done, total)
+	}
 }
 
 func renderV03(w io.Writer, h *Header, cells map[string]*Cell, headerErrs []Finding, jsonOut bool) {
@@ -220,39 +228,39 @@ func renderV03(w io.Writer, h *Header, cells map[string]*Cell, headerErrs []Find
 
 func fillRollups(r *Roll, attrs []string, grid map[string]map[string]string) {
 	for _, a := range attrs {
-		w := -1
+		blocks := make([]string, 0, len(families))
 		for _, fam := range families {
-			x := grid[a][fam]
-			if x == "·" {
-				continue
-			}
-			fr := firstRag(x)
-			if fr == "-" {
-				continue // all-N/A block: nothing assessable, roll up from what exists
-			}
-			if t := ragRank(fr); t > w {
-				w = t
-			}
+			blocks = append(blocks, grid[a][fam])
 		}
-		r.ByAttr[a] = ragLetter(w)
+		r.ByAttr[a] = ragLetter(worstBlock(blocks))
 	}
 	for _, fam := range families {
-		w := -1
+		blocks := make([]string, 0, len(attrs))
 		for _, a := range attrs {
-			x := grid[a][fam]
-			if x == "·" {
-				continue
-			}
-			fr := firstRag(x)
-			if fr == "-" {
-				continue
-			}
-			if t := ragRank(fr); t > w {
-				w = t
-			}
+			blocks = append(blocks, grid[a][fam])
 		}
-		r.ByFamily[fam] = ragLetter(w)
+		r.ByFamily[fam] = ragLetter(worstBlock(blocks))
 	}
+}
+
+// worstBlock is the worst RAG rank of a grid row or column, -1 when nothing in
+// it is assessable: "·" is a family the header does not declare, "-" an all-N/A
+// block, and neither rolls up.
+func worstBlock(blocks []string) int {
+	w := -1
+	for _, x := range blocks {
+		if x == "·" {
+			continue
+		}
+		fr := firstRag(x)
+		if fr == "-" {
+			continue
+		}
+		if t := ragRank(fr); t > w {
+			w = t
+		}
+	}
+	return w
 }
 
 // firstRag takes the RAG letter from a v0.3 cell string like "R 1/6".

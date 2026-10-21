@@ -169,6 +169,36 @@ func readChains(r *ChainReport, records []*Verified) {
 	if len(records) == 0 {
 		return
 	}
+	followers, heads := indexChains(records)
+	w := &chainWalk{r: r, followers: followers}
+	for _, h := range heads {
+		w.walk([]*Verified{h}, false)
+	}
+	groups, branches := w.groups, w.branches
+	// Groups begun at a true head (prev zero, or a prev naming no record held)
+	// are ordered and compared below. A fork's branches begin at a follower of
+	// a record held; the fork is C2 where it is found, and its branches are
+	// read inside, not compared again.
+	for _, g := range append(append([][]*Verified{}, groups...), branches...) {
+		readGroup(r, g)
+	}
+	sort.Slice(groups, func(i, j int) bool { return groups[i][0].CreatedAt < groups[j][0].CreatedAt })
+	for i := 1; i < len(groups); i++ {
+		readChainGap(r, groups[i-1], groups[i])
+	}
+	if len(groups) == 0 {
+		// Every record follows another: a cycle cannot be signed, so this is
+		// only a set of branches; its forks are already C2.
+		groups = branches
+	}
+	first, last := groups[0][0], groups[len(groups)-1]
+	r.FirstSeq, r.FirstObserved = first.Seq, first.ObservedAt
+	r.LastSeq, r.LastObserved = last[len(last)-1].Seq, last[len(last)-1].ObservedAt
+}
+
+// indexChains links the records by their prev hashes: the records that follow
+// each one, and the heads, which follow none that is held.
+func indexChains(records []*Verified) (map[[32]byte][]*Verified, []*Verified) {
 	byHash := map[[32]byte]*Verified{}
 	for _, v := range records {
 		byHash[v.WireHash] = v
@@ -184,66 +214,56 @@ func readChains(r *ChainReport, records []*Verified) {
 		}
 		heads = append(heads, v)
 	}
-	// Groups begun at a true head (prev zero, or a prev naming no record held)
-	// are ordered and compared below. A fork's branches begin at a follower of
-	// a record held; the fork is C2 where it is found, and its branches are
-	// read inside, not compared again.
-	var groups, branches [][]*Verified
-	var walk func(group []*Verified, branch bool)
-	walk = func(group []*Verified, branch bool) {
-		last := group[len(group)-1]
-		next := followers[last.WireHash]
-		sort.Slice(next, func(i, j int) bool { return next[i].CreatedAt < next[j].CreatedAt })
-		switch {
-		case len(next) == 1:
-			walk(append(group, next[0]), branch)
-			return
-		case len(next) > 1:
-			r.C2 = append(r.C2, next[1].Seq)
-			for _, n := range next {
-				walk([]*Verified{n}, true)
-			}
-		}
-		if branch {
-			branches = append(branches, group)
-		} else {
-			groups = append(groups, group)
-		}
-	}
-	for _, h := range heads {
-		walk([]*Verified{h}, false)
-	}
-	for _, g := range append(append([][]*Verified{}, groups...), branches...) {
-		readGroup(r, g)
-	}
-	sort.Slice(groups, func(i, j int) bool { return groups[i][0].CreatedAt < groups[j][0].CreatedAt })
-	for i := 1; i < len(groups); i++ {
-		before, g := groups[i-1], groups[i]
-		head, highest := g[0], before[len(before)-1]
-		switch {
-		case head.CreatedAt <= highest.CreatedAt:
-			r.C2 = append(r.C2, head.Seq)
-		case head.Seq == 0:
-			r.C6++
-			r.Holes = append(r.Holes, fmt.Sprintf("restart after seq %d (%s), at %s", highest.Seq, ms(highest.ObservedAt), ms(head.ObservedAt)))
-		case head.Seq == highest.Seq+1:
-			// Nothing missing between, yet the head does not follow the record
-			// held at the previous seq: its prev names another record there.
-			r.C2 = append(r.C2, head.Seq)
-		case head.Seq > highest.Seq:
-			r.C1 = append(r.C1, Gap{highest.Seq + 1, head.Seq - 1})
-		default:
-			r.C2 = append(r.C2, head.Seq)
+	return followers, heads
+}
+
+// chainWalk follows the links from each head and collects one group per chain.
+type chainWalk struct {
+	r         *ChainReport
+	followers map[[32]byte][]*Verified
+	groups    [][]*Verified
+	branches  [][]*Verified
+}
+
+func (w *chainWalk) walk(group []*Verified, branch bool) {
+	last := group[len(group)-1]
+	next := w.followers[last.WireHash]
+	sort.Slice(next, func(i, j int) bool { return next[i].CreatedAt < next[j].CreatedAt })
+	switch {
+	case len(next) == 1:
+		w.walk(append(group, next[0]), branch)
+		return
+	case len(next) > 1:
+		w.r.C2 = append(w.r.C2, next[1].Seq)
+		for _, n := range next {
+			w.walk([]*Verified{n}, true)
 		}
 	}
-	if len(groups) == 0 {
-		// Every record follows another: a cycle cannot be signed, so this is
-		// only a set of branches; its forks are already C2.
-		groups = branches
+	if branch {
+		w.branches = append(w.branches, group)
+	} else {
+		w.groups = append(w.groups, group)
 	}
-	first, last := groups[0][0], groups[len(groups)-1]
-	r.FirstSeq, r.FirstObserved = first.Seq, first.ObservedAt
-	r.LastSeq, r.LastObserved = last[len(last)-1].Seq, last[len(last)-1].ObservedAt
+}
+
+// readChainGap compares one group's head with the group before it.
+func readChainGap(r *ChainReport, before, g []*Verified) {
+	head, highest := g[0], before[len(before)-1]
+	switch {
+	case head.CreatedAt <= highest.CreatedAt:
+		r.C2 = append(r.C2, head.Seq)
+	case head.Seq == 0:
+		r.C6++
+		r.Holes = append(r.Holes, fmt.Sprintf("restart after seq %d (%s), at %s", highest.Seq, ms(highest.ObservedAt), ms(head.ObservedAt)))
+	case head.Seq == highest.Seq+1:
+		// Nothing missing between, yet the head does not follow the record held
+		// at the previous seq: its prev names another record there.
+		r.C2 = append(r.C2, head.Seq)
+	case head.Seq > highest.Seq:
+		r.C1 = append(r.C1, Gap{highest.Seq + 1, head.Seq - 1})
+	default:
+		r.C2 = append(r.C2, head.Seq)
+	}
 }
 
 // readGroup reads C3, C4, C5 and C7 within one group, and the publish policy
