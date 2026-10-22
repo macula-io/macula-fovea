@@ -253,8 +253,9 @@ func verifyAdmittedNode(e record.Record, observer [32]byte) *Refusal {
 	return refuse(5, "the endorsement admits another node than %x, the observation's signer", observer)
 }
 
-// verifyAdmissionWindow is step 6: the endorsement admits the node at T, for
-// at most 30 days.
+// verifyAdmissionWindow is step 6: the endorsement admits the node at T, over a
+// window no longer than macula admits (record.MaxEndorsementWindowMs: 24 hours
+// since wire 1.0, macula#118).
 func verifyAdmissionWindow(e record.Record, created uint64) *Refusal {
 	from, okFrom := uintField(e.Payload, "valid_from")
 	until, okUntil := uintField(e.Payload, "valid_until")
@@ -262,7 +263,8 @@ func verifyAdmissionWindow(e record.Record, created uint64) *Refusal {
 	case !okFrom || !okUntil:
 		return refuse(6, "the endorsement has no integer valid_from and valid_until")
 	case until < from || until-from > uint64(record.MaxEndorsementWindowMs):
-		return refuse(6, "the endorsement's window is not at most 30 days")
+		return refuse(6, "the endorsement's window is longer than the %d hours macula admits",
+			record.MaxEndorsementWindowMs/3600000)
 	case created < from || created > until:
 		return refuse(6, "the endorsement admits %s to %s, not %s", ms(from), ms(until), ms(created))
 	}

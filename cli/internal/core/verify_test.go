@@ -12,7 +12,7 @@ import (
 	"github.com/macula-io/macula-go/profile"
 )
 
-// The vectors in testdata/verify were signed by macula 13 (generate.escript)
+// The vectors in testdata/verify were signed by macula 16, wire 1.0 records (generate.escript)
 // with fresh, synthetic keys. Every one but obs_holding and obs_broken fails
 // exactly one step of spec 15's verification; its name says which.
 

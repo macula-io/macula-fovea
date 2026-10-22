@@ -1,7 +1,7 @@
 #!/usr/bin/env escript
 %% Generates the fixture vectors of `fovea verify` (spec v0.4, 15): fresh,
 %% synthetic keys, a realm member endorsement and claim observations signed as
-%% macula 13 signs them, and the assessment revision they name as a git bundle.
+%% macula 16 signs them (wire 1.0 records), and the assessment revision they name as a git bundle.
 %% Run with macula's compiled beams on ERL_LIBS and git on PATH:
 %%
 %%   ERL_LIBS=<_build/default/lib> escript generate.escript <out dir>
@@ -17,6 +17,13 @@
 -define(ADDRESS, <<"192.0.2.10:4433">>).
 -define(STATION, binary:decode_hex(<<"0011111111111111111111111111111111111111111111111111111111111111">>)).
 -define(DAY, 86400000).
+%% A realm member endorsement covers at most 24 hours (macula 16, macula#118):
+%% the fixture's windows open 12 hours back and close 11 hours ahead, which
+%% covers the chains' rounds (8 hours back to 1 hour back).
+%% The expired one closed 2 hours before the observation: its record is still
+%% alive then (step 3 passes), its window is not (step 6 refuses).
+-define(BACK, 12 * 3600000).
+-define(AHEAD, 11 * 3600000).
 
 main([Out]) ->
     ok = filelib:ensure_path(Out),
@@ -30,12 +37,12 @@ main([Out]) ->
     Now = erlang:system_time(millisecond),
     Sha = assessment(Out, NodeA),
     write(Out, "realm_key", macula_node_keys:public_key(Realm)),
-    write(Out, "endorsement", endorsement(Realm, RealmId, NodeA, Now - ?DAY, Now + 29 * ?DAY)),
-    write(Out, "endorsement_b", endorsement(Realm, RealmId, NodeB, Now - ?DAY, Now + 29 * ?DAY)),
-    write(Out, "s3_endorsement_other_signer", endorsement(OtherRealm, RealmId, NodeA, Now - ?DAY, Now + 29 * ?DAY)),
+    write(Out, "endorsement", endorsement(Realm, RealmId, NodeA, Now - ?BACK, Now + ?AHEAD)),
+    write(Out, "endorsement_b", endorsement(Realm, RealmId, NodeB, Now - ?BACK, Now + ?AHEAD)),
+    write(Out, "s3_endorsement_other_signer", endorsement(OtherRealm, RealmId, NodeA, Now - ?BACK, Now + ?AHEAD)),
     Elsewhere = crypto:hash(sha256, <<"elsewhere.example.org">>),
-    write(Out, "s4_endorsement_other_realm", endorsement(Realm, Elsewhere, NodeA, Now - ?DAY, Now + 29 * ?DAY)),
-    write(Out, "s6_endorsement_expired", endorsement(Realm, RealmId, NodeA, Now - 20 * ?DAY, Now - 10 * ?DAY)),
+    write(Out, "s4_endorsement_other_realm", endorsement(Realm, Elsewhere, NodeA, Now - ?BACK, Now + ?AHEAD)),
+    write(Out, "s6_endorsement_expired", endorsement(Realm, RealmId, NodeA, Now - 14 * 3600000, Now - 2 * 3600000)),
     Holding = payload(RealmId, Sha, Now),
     Accepted = groups(#{<<"secp384r1_mlkem1024">> => 0, <<"secp256r1_mlkem768">> => 0}),
     Refused = groups(#{<<"x25519">> => 1, <<"secp256r1">> => 1, <<"secp384r1">> => 1}),
@@ -121,9 +128,9 @@ cases(Dir, Name, Links) ->
 
 endorsement(Key, RealmId, Member, From, Until) ->
     Unsigned = macula_record:realm_member_endorsement(RealmId, #{realm => RealmId, member_node => Member, roles => [<<"peer">>]},
-                                                      #{valid_from => From, valid_until => Until, ttl_ms => 30 * ?DAY}),
+                                                      #{valid_from => From, valid_until => Until, ttl_ms => ?DAY}),
     %% Created when its window opens, so it covers records dated before now.
-    macula_record:encode(macula_record:sign(Unsigned#{created_at => From, expires_at => From + 30 * ?DAY}, Key)).
+    macula_record:encode(macula_record:sign(Unsigned#{created_at => From, expires_at => From + ?DAY}, Key)).
 
 subject() -> <<?SYSTEM/binary, 0, ?CLAIM/binary, 0, ?ADDRESS/binary>>.
 

@@ -7,6 +7,23 @@ Two version lines live in this repository and are kept apart:
 - **Spec** versions (`spec/vX.Y/`): declared by an assessment header as
   `fovea: "X.Y"`. A tool release says which spec versions it reads.
 
+## Tool 0.5.0 (unreleased), reads spec 0.2 to 0.6
+
+Install with `go install github.com/macula-io/macula-fovea/cli/cmd/fovea@v0.5.0`
+(module tag `cli/v0.5.0`).
+
+- **verify reads wire 1.0 records** (breaking). The fleet moved to wire 1.0 on
+  19 October 2026, and the record encoding moved with it (macula 16,
+  macula-go 0.27; WIRE_1_0.md section 5). The CLI is on macula-go 0.28.0, so
+  `fovea verify` accepts the observations signed since then and refuses the
+  older ones at step 1 as `record: malformed`. To verify records signed before
+  the flag day, use tool 0.4.0, which reads only those. A kept history that
+  spans the flag day is verified in two parts, one per tool.
+- **Step 6: an endorsement's window is at most 24 hours** on wire 1.0, as
+  macula 16 and macula-go 0.28 admit (macula#118); 30 days before. Spec v0.6
+  says so.
+- The verify vectors are signed by macula 16 (`testdata/verify/generate.escript`).
+
 ## Tool 0.4.0 (2026-10-06), reads spec 0.2 to 0.6
 
 Install with `go install github.com/macula-io/macula-fovea/cli/cmd/fovea@v0.4.0`

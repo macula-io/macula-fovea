@@ -146,8 +146,9 @@ endorsement that covered it has expired:
    record names its signer by the `MACULA-KEY-ID-V1` key id of `key`, which
    for a node identity key differs from its node id, and comparing the two
    would refuse every genuine observation.
-6. `valid_from` ≤ T ≤ `valid_until`, and the endorsement's window is at most
-   30 days.
+6. `valid_from` ≤ T ≤ `valid_until`, and the endorsement's window is no
+   longer than macula admits: 30 days before wire 1.0, 24 hours since
+   (macula 16 and macula-go 0.28, macula#118).
 7. That node id is one of the header's `policy.observers`.
 8. `outcomes` has exactly the groups of `expected`, and `state` is what
    16-probes' judgement of `probe` at `probe_version` gives for those
@@ -172,7 +173,7 @@ state follows from them. It does not prove:
 - that the stated time is true: `created_at` is the observer's clock. A
   realm member endorsement withdrawn inside its window is invisible offline,
   so a withdrawn observer can backdate a record to any time up to the
-  endorsement's `valid_until`, at most 30 days.
+  endorsement's `valid_until`: at most 24 hours on wire 1.0 (30 days before).
 
 ### Verifying a chain
 
