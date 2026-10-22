@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # This exists so every third-party action this repo runs stays pinned to a
-# full commit sha with its release tag as a comment, and a regression to a
+# full commit sha with its release tag as a comment, every first-party
+# macula-io reusable workflow to a full commit sha, and a regression to a
 # moving ref such as @v4 or @main fails CI.
 #
 # usage: scripts/check-pinned-actions.sh [FILE...]
@@ -25,6 +26,10 @@ if [ "$#" -eq 0 ]; then
 fi
 
 pinned='^[[:space:]]*(-[[:space:]]+)?uses:[[:space:]]+[A-Za-z0-9_.-]+/[A-Za-z0-9_./-]+@[0-9a-f]{40}[[:space:]]+#[[:space:]]+v[0-9]+(\.[0-9]+)*[[:space:]]*$'
+# A first-party reusable workflow (macula-io/<repo>/.github/workflows/...) is
+# pinned by full commit sha alone, as every shared call in the fleet is: those
+# repositories are not released under tags, so there is no tag to name.
+first_party='^[[:space:]]*(-[[:space:]]+)?uses:[[:space:]]+macula-io/[A-Za-z0-9_.-]+/\.github/workflows/[A-Za-z0-9_.-]+\.ya?ml@[0-9a-f]{40}[[:space:]]*$'
 bad=0
 for f in "$@"; do
   n=0
@@ -38,7 +43,7 @@ for f in "$@"; do
     if [[ "$line" =~ ^[[:space:]]*# ]] || [[ "$line" =~ uses:[[:space:]]+\./ ]] || [[ "$line" =~ uses:[[:space:]]+docker:// ]]; then
       continue
     fi
-    if ! [[ "$line" =~ $pinned ]]; then
+    if ! [[ "$line" =~ $pinned ]] && ! [[ "$line" =~ $first_party ]]; then
       echo "::error file=$f,line=$n,title=unpinned action::$(echo "$line" | sed 's/^[[:space:]]*//') (pin to a 40-char commit sha with '# vX.Y.Z')"
       bad=$((bad + 1))
     fi
