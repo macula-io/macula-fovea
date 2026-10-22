@@ -148,7 +148,8 @@ scripts/              # the Action's pin-staleness check and pin guard, with off
 docs/                 # operator-facing: getting started, reference, reading, writing
 packs/                # the intended format for pre-filled cell packs (none yet)
 templates/            # a cell skeleton to copy by hand
-assets/               # brand artwork (dark/light logo variants)
+assets/               # brand artwork (dark/light logo variants), the C4 diagrams
+architecture/         # the C4 model: c4_diagrams.py draws assets/c4-*.svg
 assessments/
   macula-mesh-realm/  # dogfood #1: header, landscape, anchors, one seed cell
 ```
@@ -195,6 +196,13 @@ and a line in the job summary, which is how a Dependabot that stopped
 working shows up in your own CI. When the check cannot tell (no network,
 rate limit, no releases yet) it says so in a notice. It never fails the
 job.
+
+## Architecture
+
+![fovea system context](assets/c4-context.svg)
+
+The C4 model, context and components with a table per diagram, is in
+[architecture/README.md](architecture/README.md).
 
 ## Relationship to other repos
 

@@ -1,0 +1,157 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 800" role="img" aria-label="fovea components">
+<title>fovea components</title>
+<style>
+.t-name { font-family: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 700; }
+.t-desc { font-family: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, Helvetica, Arial, sans-serif; font-size: 12.5px; }
+.t-rel { font-family: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, Helvetica, Arial, sans-serif; font-size: 11.5px; paint-order: stroke; stroke-width: 4px; stroke-linejoin: round; }
+.t-code { font-family: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace; font-size: 13px; font-weight: 600; }
+.t-type { font-family: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace; font-size: 11.5px; }
+.t-bound { font-family: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace; font-size: 12px; font-weight: 600; }
+.t-leg { font-family: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, Helvetica, Arial, sans-serif; font-size: 12px; }
+.edge { fill: none; stroke-width: 1.25; }
+.edge-later { fill: none; stroke-width: 1.25; stroke-dasharray: 5 4; }
+.bg { fill: #FFFFFF; }
+.b-sys { fill: #F5E9CC; stroke: #A56F0A; stroke-width: 2; }
+.b-per { fill: #E3EBF2; stroke: #3B5B7A; stroke-width: 1.25; }
+.b-mac { fill: #E6E4EE; stroke: #5E5A78; stroke-width: 1.25; }
+.b-ext { fill: #ECEFED; stroke: #8A9791; stroke-width: 1.25; }
+.b-cmp { fill: #FFFFFF; stroke: #8A9791; stroke-width: 1.25; }
+.b-later { fill: none; stroke: #8A9791; stroke-width: 1.25; stroke-dasharray: 5 4; }
+.bound { fill: none; stroke: #B3BDB8; stroke-width: 1; }
+.head { fill: #3B5B7A; }
+.t-name, .t-code { fill: #16201D; }
+.t-type, .t-bound, .t-leg { fill: #66736E; }
+.t-desc { fill: #34413C; }
+.t-rel { fill: #66736E; stroke: #FFFFFF; }
+.edge, .edge-later { stroke: #8A9791; }
+.arrowhead { fill: #8A9791; }
+@media (prefers-color-scheme: dark) {
+.bg { fill: #171F1C; }
+.b-sys { fill: #3A2E13; stroke: #E3AA3C; }
+.b-per { fill: #1D2A36; stroke: #8EB4D8; }
+.b-mac { fill: #26243A; stroke: #A9A4C8; }
+.b-ext { fill: #1C2421; stroke: #7D8B85; }
+.b-cmp { fill: #171F1C; stroke: #7D8B85; }
+.b-later { stroke: #7D8B85; }
+.bound { stroke: #4A5752; }
+.head { fill: #8EB4D8; }
+.t-name, .t-code { fill: #E6ECE9; }
+.t-type, .t-bound, .t-leg { fill: #93A09A; }
+.t-desc { fill: #C3CDC8; }
+.t-rel { fill: #93A09A; stroke: #171F1C; }
+.edge, .edge-later { stroke: #7D8B85; }
+.arrowhead { fill: #7D8B85; }
+}
+</style>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrowhead" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="bg" x="0" y="0" width="1240" height="800"/>
+<rect class="b-cmp" x="286" y="30" width="326" height="100" rx="10"/>
+<text class="t-code" x="302" y="58">action.yml</text>
+<text class="t-type" x="302" y="76">[composite GitHub Action]</text>
+<text class="t-desc" x="302" y="100">Checks its own pin, builds fovea,</text>
+<text class="t-desc" x="302" y="116">runs it, annotates, writes artifacts</text>
+<rect class="b-cmp" x="628" y="30" width="326" height="100" rx="10"/>
+<text class="t-code" x="644" y="58">spec/v0.6/</text>
+<text class="t-type" x="644" y="76">[the spec, normative]</text>
+<text class="t-desc" x="644" y="100">Axes, attributes, cell schema,</text>
+<text class="t-desc" x="644" y="116">scorecard, observations, probes</text>
+<rect class="bound" x="270" y="170" width="700" height="540" rx="12"/>
+<text class="t-bound" x="286" y="192">fovea [cli/, one static binary]</text>
+<rect class="b-sys" x="286" y="205" width="668" height="80" rx="10"/>
+<text class="t-code" x="302" y="233">cmd/fovea main.go</text>
+<text class="t-type" x="302" y="251">[entry point]</text>
+<text class="t-desc" x="302" y="275">Parses the command line; dispatches; --version names the tool and the spec versions it reads.</text>
+<rect class="b-cmp" x="286" y="310" width="155" height="110" rx="10"/>
+<text class="t-code" x="302" y="338">init</text>
+<text class="t-type" x="302" y="356">[init.go]</text>
+<text class="t-desc" x="302" y="380">Cell skeletons</text>
+<text class="t-desc" x="302" y="396">from the header</text>
+<rect class="b-cmp" x="457" y="310" width="155" height="110" rx="10"/>
+<text class="t-code" x="473" y="338">lint</text>
+<text class="t-type" x="473" y="356">[lint.go, rules.go]</text>
+<text class="t-desc" x="473" y="380">Grid, status, content,</text>
+<text class="t-desc" x="473" y="396">anti-theater rules</text>
+<rect class="b-cmp" x="628" y="310" width="155" height="110" rx="10"/>
+<text class="t-code" x="644" y="338">score, render</text>
+<text class="t-type" x="644" y="356">[score, render]</text>
+<text class="t-desc" x="644" y="380">Scorecard; md,</text>
+<text class="t-desc" x="644" y="396">html or json</text>
+<rect class="b-cmp" x="799" y="310" width="155" height="110" rx="10"/>
+<text class="t-code" x="815" y="338">issues</text>
+<text class="t-type" x="815" y="356">[issues, github]</text>
+<text class="t-desc" x="815" y="380">Roadmap and overdue</text>
+<text class="t-desc" x="815" y="396">cells to issues</text>
+<rect class="b-cmp" x="286" y="450" width="326" height="110" rx="10"/>
+<text class="t-code" x="302" y="478">types.go</text>
+<text class="t-type" x="302" y="496">[LoadHeader, LoadCells]</text>
+<text class="t-desc" x="302" y="520">Reads fovea.yaml and every cell</text>
+<text class="t-desc" x="302" y="536">file; spec versions 0.2 to 0.6</text>
+<rect class="b-cmp" x="628" y="450" width="326" height="110" rx="10"/>
+<text class="t-code" x="644" y="478">verify</text>
+<text class="t-type" x="644" y="496">[verify.go, verify_chain.go]</text>
+<text class="t-desc" x="644" y="520">Nine steps, offline; --chain reads</text>
+<text class="t-desc" x="644" y="536">C1 to C7; the assessment revision</text>
+<text class="t-desc" x="644" y="552">from git objects, never a checkout</text>
+<rect class="b-cmp" x="286" y="590" width="326" height="100" rx="10"/>
+<text class="t-name" x="302" y="618">gopkg.in/yaml.v3</text>
+<text class="t-type" x="302" y="636">[library]</text>
+<text class="t-desc" x="302" y="660">The header and cells</text>
+<rect class="b-mac" x="628" y="590" width="326" height="100" rx="10"/>
+<text class="t-name" x="644" y="618">macula-go v0.21.0</text>
+<text class="t-type" x="644" y="636">[Macula SDK: cbor, identity, ...]</text>
+<text class="t-desc" x="644" y="660">record, profile: the 0x23 record,</text>
+<text class="t-desc" x="644" y="676">ML-DSA signatures, the realm key</text>
+<rect class="b-ext" x="20" y="450" width="200" height="110" rx="10"/>
+<text class="t-name" x="36" y="478">Assessment</text>
+<text class="t-type" x="36" y="496">[External: git]</text>
+<text class="t-desc" x="36" y="520">fovea.yaml and</text>
+<text class="t-desc" x="36" y="536">cells, history</text>
+<rect class="b-ext" x="1020" y="310" width="200" height="110" rx="10"/>
+<text class="t-name" x="1036" y="338">GitHub REST API</text>
+<text class="t-type" x="1036" y="356">[External]</text>
+<text class="t-desc" x="1036" y="380">Issues, marked</text>
+<text class="t-desc" x="1036" y="396">fovea-cell: id</text>
+<rect class="b-ext" x="1020" y="450" width="200" height="110" rx="10"/>
+<text class="t-name" x="1036" y="478">Observations</text>
+<text class="t-type" x="1036" y="496">[External: files]</text>
+<text class="t-desc" x="1036" y="520">Records, endorse-</text>
+<text class="t-desc" x="1036" y="536">ments, realm key</text>
+<path class="edge" d="M580 130V205" marker-end="url(#a)"/>
+<text class="t-rel" x="588" y="155">builds, runs</text>
+<path class="edge" d="M791 130V205" marker-end="url(#a)"/>
+<text class="t-rel" x="799" y="155">implements</text>
+<path class="edge" d="M363 285V310" marker-end="url(#a)"/>
+<path class="edge" d="M534 285V310" marker-end="url(#a)"/>
+<path class="edge" d="M705 285V310" marker-end="url(#a)"/>
+<path class="edge" d="M876 285V310" marker-end="url(#a)"/>
+<path class="edge" d="M791 285V450" marker-end="url(#a)"/>
+<text class="t-rel" x="799" y="442">verify</text>
+<path class="edge" d="M363 420V450" marker-end="url(#a)"/>
+<path class="edge" d="M534 420V450" marker-end="url(#a)"/>
+<path class="edge" d="M705 420V435H600V450" marker-end="url(#a)"/>
+<text class="t-rel" x="371" y="442">load</text>
+<path class="edge" d="M286 505H220" marker-end="url(#a)"/>
+<text class="t-rel" x="245" y="495" text-anchor="middle">reads</text>
+<path class="edge" d="M449 560V590" marker-end="url(#a)"/>
+<text class="t-rel" x="457" y="580">parses</text>
+<path class="edge" d="M791 560V590" marker-end="url(#a)"/>
+<text class="t-rel" x="799" y="580">verifies with</text>
+<path class="edge" d="M954 365H1020" marker-end="url(#a)"/>
+<text class="t-rel" x="987" y="355" text-anchor="middle">HTTPS</text>
+<path class="edge" d="M954 505H1020" marker-end="url(#a)"/>
+<text class="t-rel" x="987" y="495" text-anchor="middle">reads</text>
+<rect class="b-sys" x="24" y="760" width="22" height="14" rx="3"/>
+<text class="t-leg" x="54" y="772">In scope</text>
+<rect class="b-per" x="110.8" y="760" width="22" height="14" rx="3"/>
+<text class="t-leg" x="140.8" y="772">Person</text>
+<rect class="b-mac" x="184.39999999999998" y="760" width="22" height="14" rx="3"/>
+<text class="t-leg" x="214.39999999999998" y="772">Macula infrastructure</text>
+<rect class="b-ext" x="357.0" y="760" width="22" height="14" rx="3"/>
+<text class="t-leg" x="387.0" y="772">External system</text>
+<rect class="b-cmp" x="490.0" y="760" width="22" height="14" rx="3"/>
+<text class="t-leg" x="520.0" y="772">Container or component</text>
+<rect class="b-later" x="669.2" y="760" width="22" height="14" rx="3"/>
+<text class="t-leg" x="699.2" y="772">Planned, not built</text>
+<rect class="bound" x="822.0" y="760" width="22" height="14" rx="3"/>
+<text class="t-leg" x="852.0" y="772">Boundary</text>
+</svg>

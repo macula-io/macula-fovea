@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 630" role="img" aria-label="fovea system context">
+<title>fovea system context</title>
+<style>
+.t-name { font-family: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 700; }
+.t-desc { font-family: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, Helvetica, Arial, sans-serif; font-size: 12.5px; }
+.t-rel { font-family: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, Helvetica, Arial, sans-serif; font-size: 11.5px; paint-order: stroke; stroke-width: 4px; stroke-linejoin: round; }
+.t-code { font-family: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace; font-size: 13px; font-weight: 600; }
+.t-type { font-family: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace; font-size: 11.5px; }
+.t-bound { font-family: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace; font-size: 12px; font-weight: 600; }
+.t-leg { font-family: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, Helvetica, Arial, sans-serif; font-size: 12px; }
+.edge { fill: none; stroke-width: 1.25; }
+.edge-later { fill: none; stroke-width: 1.25; stroke-dasharray: 5 4; }
+.bg { fill: #FFFFFF; }
+.b-sys { fill: #F5E9CC; stroke: #A56F0A; stroke-width: 2; }
+.b-per { fill: #E3EBF2; stroke: #3B5B7A; stroke-width: 1.25; }
+.b-mac { fill: #E6E4EE; stroke: #5E5A78; stroke-width: 1.25; }
+.b-ext { fill: #ECEFED; stroke: #8A9791; stroke-width: 1.25; }
+.b-cmp { fill: #FFFFFF; stroke: #8A9791; stroke-width: 1.25; }
+.b-later { fill: none; stroke: #8A9791; stroke-width: 1.25; stroke-dasharray: 5 4; }
+.bound { fill: none; stroke: #B3BDB8; stroke-width: 1; }
+.head { fill: #3B5B7A; }
+.t-name, .t-code { fill: #16201D; }
+.t-type, .t-bound, .t-leg { fill: #66736E; }
+.t-desc { fill: #34413C; }
+.t-rel { fill: #66736E; stroke: #FFFFFF; }
+.edge, .edge-later { stroke: #8A9791; }
+.arrowhead { fill: #8A9791; }
+@media (prefers-color-scheme: dark) {
+.bg { fill: #171F1C; }
+.b-sys { fill: #3A2E13; stroke: #E3AA3C; }
+.b-per { fill: #1D2A36; stroke: #8EB4D8; }
+.b-mac { fill: #26243A; stroke: #A9A4C8; }
+.b-ext { fill: #1C2421; stroke: #7D8B85; }
+.b-cmp { fill: #171F1C; stroke: #7D8B85; }
+.b-later { stroke: #7D8B85; }
+.bound { stroke: #4A5752; }
+.head { fill: #8EB4D8; }
+.t-name, .t-code { fill: #E6ECE9; }
+.t-type, .t-bound, .t-leg { fill: #93A09A; }
+.t-desc { fill: #C3CDC8; }
+.t-rel { fill: #93A09A; stroke: #171F1C; }
+.edge, .edge-later { stroke: #7D8B85; }
+.arrowhead { fill: #7D8B85; }
+}
+</style>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrowhead" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="bg" x="0" y="0" width="1000" height="630"/>
+<rect class="b-per" x="40" y="30" width="270" height="96" rx="10"/>
+<circle class="head" cx="66" cy="54" r="9"/>
+<text class="t-name" x="84" y="58">Assessment author</text>
+<text class="t-type" x="84" y="76">[Person]</text>
+<text class="t-desc" x="56" y="100">Writes the header and the cells;</text>
+<text class="t-desc" x="56" y="116">runs init, lint, score, render</text>
+<rect class="b-ext" x="365" y="30" width="270" height="96" rx="10"/>
+<text class="t-name" x="381" y="58">Consumer CI</text>
+<text class="t-type" x="381" y="76">[External: GitHub Actions]</text>
+<text class="t-desc" x="381" y="100">Runs action.yml pinned by sha:</text>
+<text class="t-desc" x="381" y="116">lint annotations, scorecard</text>
+<rect class="b-per" x="690" y="30" width="270" height="96" rx="10"/>
+<circle class="head" cx="716" cy="54" r="9"/>
+<text class="t-name" x="734" y="58">Anyone who checks</text>
+<text class="t-type" x="734" y="76">[Person]</text>
+<text class="t-desc" x="706" y="100">A buyer, partner or auditor:</text>
+<text class="t-desc" x="706" y="116">runs fovea verify offline</text>
+<rect class="b-ext" x="40" y="200" width="270" height="120" rx="10"/>
+<text class="t-name" x="56" y="228">Assessment repository</text>
+<text class="t-type" x="56" y="246">[External: git]</text>
+<text class="t-desc" x="56" y="270">fovea.yaml, landscape, anchors,</text>
+<text class="t-desc" x="56" y="286">one YAML file per cell; its</text>
+<text class="t-desc" x="56" y="302">history holds every revision</text>
+<rect class="b-sys" x="365" y="200" width="270" height="120" rx="10"/>
+<text class="t-name" x="381" y="228">fovea</text>
+<text class="t-type" x="381" y="246">[CLI, one static Go binary]</text>
+<text class="t-desc" x="381" y="270">The spec's reference tool: init,</text>
+<text class="t-desc" x="381" y="286">lint, score, render, issues and</text>
+<text class="t-desc" x="381" y="302">verify (--chain, --json)</text>
+<rect class="b-ext" x="690" y="200" width="270" height="120" rx="10"/>
+<text class="t-name" x="706" y="228">GitHub REST API</text>
+<text class="t-type" x="706" y="246">[External system]</text>
+<text class="t-desc" x="706" y="270">Issues for roadmap and overdue</text>
+<text class="t-desc" x="706" y="286">cells; this repo's releases for</text>
+<text class="t-desc" x="706" y="302">the Action's pin check</text>
+<rect class="b-mac" x="40" y="430" width="270" height="120" rx="10"/>
+<text class="t-name" x="56" y="458">Realm public key</text>
+<text class="t-type" x="56" y="476">[Macula infrastructure]</text>
+<text class="t-desc" x="56" y="500">The trust anchor: an observer's</text>
+<text class="t-desc" x="56" y="516">endorsement and every record</text>
+<text class="t-desc" x="56" y="532">are checked against it</text>
+<rect class="b-ext" x="365" y="430" width="270" height="120" rx="10"/>
+<text class="t-name" x="381" y="458">Observation records</text>
+<text class="t-type" x="381" y="476">[External: files]</text>
+<text class="t-desc" x="381" y="500">Signed 0x23 claim observations</text>
+<text class="t-desc" x="381" y="516">and endorsements, e.g. a clone</text>
+<text class="t-desc" x="381" y="532">of mcl-fovea-records</text>
+<rect class="b-ext" x="690" y="430" width="270" height="120" rx="10"/>
+<text class="t-name" x="706" y="458">mcl-fovea observer</text>
+<text class="t-type" x="706" y="476">[External: ours, mesh service]</text>
+<text class="t-desc" x="706" y="500">Probes, judges, signs and chains</text>
+<text class="t-desc" x="706" y="516">each verdict; implements the</text>
+<text class="t-desc" x="706" y="532">same rules as this lint</text>
+<path class="edge" d="M175 126V200" marker-end="url(#a)"/>
+<text class="t-rel" x="183" y="162">writes cells</text>
+<path class="edge" d="M310 100H338V230H365" marker-end="url(#a)"/>
+<text class="t-rel" x="346" y="170" transform="rotate(90 346 170)">runs</text>
+<path class="edge" d="M500 126V200" marker-end="url(#a)"/>
+<text class="t-rel" x="508" y="162">builds and runs it</text>
+<path class="edge" d="M690 100H662V230H635" marker-end="url(#a)"/>
+<text class="t-rel" x="656" y="165" text-anchor="middle" transform="rotate(-90 656 165)">runs verify</text>
+<path class="edge" d="M365 280H310" marker-end="url(#a)"/>
+<text class="t-rel" x="337" y="270" text-anchor="middle">reads,</text>
+<text class="t-rel" x="337" y="302" text-anchor="middle">git</text>
+<path class="edge" d="M635 280H690" marker-end="url(#a)"/>
+<text class="t-rel" x="662" y="270" text-anchor="middle">HTTPS</text>
+<text class="t-rel" x="662" y="302" text-anchor="middle">REST</text>
+<path class="edge" d="M500 320V430" marker-end="url(#a)"/>
+<text class="t-rel" x="508" y="368">verify reads, offline</text>
+<path class="edge" d="M420 320V375H175V430" marker-end="url(#a)"/>
+<text class="t-rel" x="250" y="367">checks against</text>
+<path class="edge" d="M690 490H635" marker-end="url(#a)"/>
+<text class="t-rel" x="662" y="480" text-anchor="middle">signs</text>
+<text class="t-rel" x="662" y="512" text-anchor="middle">records</text>
+<rect class="b-sys" x="24" y="590" width="22" height="14" rx="3"/>
+<text class="t-leg" x="54" y="602">In scope</text>
+<rect class="b-per" x="110.8" y="590" width="22" height="14" rx="3"/>
+<text class="t-leg" x="140.8" y="602">Person</text>
+<rect class="b-mac" x="184.39999999999998" y="590" width="22" height="14" rx="3"/>
+<text class="t-leg" x="214.39999999999998" y="602">Macula infrastructure</text>
+<rect class="b-ext" x="357.0" y="590" width="22" height="14" rx="3"/>
+<text class="t-leg" x="387.0" y="602">External system</text>
+<rect class="b-cmp" x="490.0" y="590" width="22" height="14" rx="3"/>
+<text class="t-leg" x="520.0" y="602">Container or component</text>
+<rect class="b-later" x="669.2" y="590" width="22" height="14" rx="3"/>
+<text class="t-leg" x="699.2" y="602">Planned, not built</text>
+</svg>
