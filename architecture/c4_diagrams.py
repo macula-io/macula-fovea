@@ -173,7 +173,7 @@ def components():
     d.box("b-cmp", 628, 450, 326, 110, "verify", "[verify.go, verify_chain.go]",
           ["Nine steps, offline; --chain reads", "C1 to C7; the assessment revision", "from git objects, never a checkout"], code=True)
     d.box("b-cmp", 286, 590, 326, 100, "gopkg.in/yaml.v3", "[library]", ["The header and cells"])
-    d.box("b-mac", 628, 590, 326, 100, "macula-go v0.21.0", "[Macula SDK: cbor, identity, ...]",
+    d.box("b-mac", 628, 590, 326, 100, "macula-go v0.28.0", "[Macula SDK: cbor, identity, ...]",
           ["record, profile: the 0x23 record,", "ML-DSA signatures, the realm key"])
     d.box("b-ext", 20, 450, 200, 110, "Assessment", "[External: git]",
           ["fovea.yaml and", "cells, history"])

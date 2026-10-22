@@ -2,7 +2,7 @@
 
 *This exists so a security assessment is data a tool can lint, score and render, and a signed observation of a claim can be checked offline by anyone.*
 
-**Status: tool 0.4.0** (`docs/CHANGELOG.md`, tag `v0.4.0`), reading spec 0.2 to 0.6; spec v0.6 is current. macula-fovea is the fovea spec (`spec/`) and its reference implementation, the `fovea` CLI (`cli/cmd/fovea`, one static Go binary), which the GitHub Action (`action.yml`) builds and runs in a consumer's CI.
+**Status: tool 0.5.0** (`docs/CHANGELOG.md`, tags `v0.5.0` and `cli/v0.5.0`), reading spec 0.2 to 0.6; spec v0.6 is current. macula-fovea is the fovea spec (`spec/`) and its reference implementation, the `fovea` CLI (`cli/cmd/fovea`, one static Go binary), which the GitHub Action (`action.yml`) builds and runs in a consumer's CI.
 
 Legend, the same in both diagrams: amber is the element in scope, blue a person, lavender-grey **Macula infrastructure** (a realm's key, the macula-go SDK), grey-green an external system, white a component, a thin solid rounded outline with a muted label a boundary, and dashed boxes are planned, not built (none here).
 
@@ -38,7 +38,7 @@ Legend, the same in both diagrams: amber is the element in scope, blue a person,
 | `types.go` | `LoadHeader`, `LoadCells` | Reads `fovea.yaml` and every cell file, for spec versions 0.2 to 0.6 |
 | `verify` | `verify.go`, `verify_chain.go`, `verify_json.go` | The nine verification steps, offline; `--chain` reads a slot's continuity (C1 to C7); `--json` |
 | `gopkg.in/yaml.v3` | Library | Parses the header and the cells |
-| macula-go v0.21.0 | Macula SDK | `record`, `identity`, `profile`, `cbor`: the 0x23 record, ML-DSA signatures, the realm key |
+| macula-go v0.28.0 | Macula SDK | `record`, `identity`, `profile`, `cbor`: the 0x23 record, ML-DSA signatures, the realm key |
 
 ## Editing the diagrams
 

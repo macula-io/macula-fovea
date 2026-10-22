@@ -97,7 +97,7 @@
 <text class="t-type" x="302" y="636">[library]</text>
 <text class="t-desc" x="302" y="660">The header and cells</text>
 <rect class="b-mac" x="628" y="590" width="326" height="100" rx="10"/>
-<text class="t-name" x="644" y="618">macula-go v0.21.0</text>
+<text class="t-name" x="644" y="618">macula-go v0.28.0</text>
 <text class="t-type" x="644" y="636">[Macula SDK: cbor, identity, ...]</text>
 <text class="t-desc" x="644" y="660">record, profile: the 0x23 record,</text>
 <text class="t-desc" x="644" y="676">ML-DSA signatures, the realm key</text>
