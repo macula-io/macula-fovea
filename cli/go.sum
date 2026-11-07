@@ -1,7 +1,7 @@
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
-github.com/macula-io/macula-go v0.28.0 h1:mAn3d7VCOIC/yr2TD5hDNTimPACMlOIWCAfN4M9a79A=
-github.com/macula-io/macula-go v0.28.0/go.mod h1:avldKU9O9cDRXMnlTdPn7YiVI2aucg3Yjnv/hxlmoEQ=
+github.com/macula-io/macula-go v0.30.0 h1:VaRu/f/841S9GYDouOdEz5xWcJ67OwOPSry7PbYSLEU=
+github.com/macula-io/macula-go v0.30.0/go.mod h1:l1SvZXXm40cdbEfaF+Jd/Jt3d2LplTQJyCP44Su/1cU=
 github.com/quic-go/quic-go v0.62.0 h1:ZHDjCk5OacATwGvs8PWE97CTvX7AqZiVoW7++ZOXTf8=
 github.com/quic-go/quic-go v0.62.0/go.mod h1:RAro2j2yN9a9EiPACLHT9IB2NXCvGQmmo/alT0yYI0w=
 golang.org/x/crypto v0.56.0 h1:GUh5Ii4J5jtcseSMiRqr1jXCNHoxjeV9Fmekc2oLy6Y=
