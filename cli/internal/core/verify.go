@@ -972,6 +972,7 @@ func printChain(stdout io.Writer, r *ChainReport) {
 	}
 	fmt.Fprintf(stdout, "%s: %d records, seq %d to %d, observed %s to %s\n", verdict, r.Accepted-r.Unchained,
 		r.FirstSeq, r.LastSeq, ms(r.FirstObserved), ms(r.LastObserved))
+	printCoverage(stdout, r)
 	fmt.Fprintf(stdout, "  files %d, accepted %d, refused %d, unchained (v0.4) %d\n", r.Records, r.Accepted, len(r.Refused), r.Unchained)
 	for _, refusal := range r.Refused {
 		fmt.Fprintf(stdout, "  refused: %v\n", refusal)
@@ -993,6 +994,20 @@ func printChain(stdout io.Writer, r *ChainReport) {
 	if r.NotEveryResult {
 		fmt.Fprintln(stdout, "  a revision's policy.publish is not every_result: continuity is not claimed")
 	}
+}
+
+// printCoverage states the floor of the range the verdict covers. A kept set
+// that starts at seq 541 reads "continuous" over the records it holds, and a
+// reader who takes that for the whole history is wrong by everything before
+// seq 541: the check begins at the first record held and looks at nothing
+// before it, so the verdict says so in its own words (mcl-fovea-records#5).
+func printCoverage(w io.Writer, r *ChainReport) {
+	if r.Accepted-r.Unchained == 0 {
+		fmt.Fprintln(w, "  coverage: no chained record is held, so nothing is covered by this verdict")
+		return
+	}
+	fmt.Fprintf(w, "  coverage: seq %d to %d; the check starts at the first record held, "+
+		"so nothing before seq %d is covered\n", r.FirstSeq, r.LastSeq, r.FirstSeq)
 }
 
 func printGap(w io.Writer, g Gap) {

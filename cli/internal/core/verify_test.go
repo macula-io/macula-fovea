@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -276,6 +277,66 @@ func TestVerifyChainCommand(t *testing.T) {
 	if rc := RunVerify(args("c1_gap"), &out, &errOut); rc != 1 || !strings.Contains(out.String(), "C1 gap: seq 2") {
 		t.Fatalf("rc %d, stdout %q", rc, out.String())
 	}
+}
+
+// The floor of the range the verdict covers (mcl-fovea-records#5). A kept set
+// whose first record held is not seq 0 reads "continuous" over the records it
+// holds and says nothing about the ones before it, so the verdict states the
+// floor itself and says that what precedes it was not checked.
+func TestTheChainVerdictStatesTheFloorItCovers(t *testing.T) {
+	repo := fixtureRepo(t)
+	file := func(n string) string { return filepath.Join("testdata", "verify", n+".hex") }
+	// The `continuous` set without its first record: four records from seq 1,
+	// and the verdict covers seq 1 to 4 only.
+	dir := kept(t, "continuous", "01.hex", "02.hex", "03.hex", "04.hex")
+	var out, errOut bytes.Buffer
+	rc := RunVerify([]string{"--realm-key", file("realm_key"), "--realm", fixtureRealm, "--profile", "pq_hybrid",
+		"--endorsement", file("endorsement"), "--repo", repo, "--path", "fixture-kx",
+		"--chain", dir}, &out, &errOut)
+	if rc != 0 || !strings.Contains(out.String(), "continuous: 4 records, seq 1 to 4") {
+		t.Fatalf("the set did not read as continuous from seq 1: rc %d, stdout %q, stderr %q",
+			rc, out.String(), errOut.String())
+	}
+	want := "coverage: seq 1 to 4; the check starts at the first record held, " +
+		"so nothing before seq 1 is covered"
+	if !strings.Contains(out.String(), want) {
+		t.Fatalf("the verdict does not state the floor it covers:\nwant %q\ngot  %q", want, out.String())
+	}
+}
+
+// A slot holding nothing chained covers nothing, and says so rather than
+// naming a range of seq 0 to 0.
+func TestAChainVerdictWithNoChainedRecordCoversNothing(t *testing.T) {
+	repo := fixtureRepo(t)
+	file := func(n string) string { return filepath.Join("testdata", "verify", n+".hex") }
+	dir := kept(t, "with_unchained", "10.hex")
+	var out, errOut bytes.Buffer
+	RunVerify([]string{"--realm-key", file("realm_key"), "--realm", fixtureRealm, "--profile", "pq_hybrid",
+		"--endorsement", file("endorsement"), "--repo", repo, "--path", "fixture-kx",
+		"--chain", dir}, &out, &errOut)
+	want := "coverage: no chained record is held, so nothing is covered by this verdict"
+	if !strings.Contains(out.String(), want) {
+		t.Fatalf("a set with nothing chained does not say what it covers:\nwant %q\ngot  %q",
+			want, out.String())
+	}
+}
+
+// kept copies the named records of one fixture chain into a directory of its
+// own, so a test can read a set the fixtures do not hold: one that starts
+// above seq 0, or one with nothing chained at all.
+func kept(t *testing.T, fixture string, names ...string) string {
+	t.Helper()
+	dir := t.TempDir()
+	for _, name := range names {
+		wire, err := os.ReadFile(filepath.Join("testdata", "verify", "chain", fixture, name))
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, name), wire, 0o644); err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+	}
+	return dir
 }
 
 // --json: the same verdicts, machine-readable; exit codes as without it.
