@@ -321,6 +321,56 @@ func TestAChainVerdictWithNoChainedRecordCoversNothing(t *testing.T) {
 	}
 }
 
+// The floor and the ceiling are the lowest and highest seq READ, not the ends
+// of one chain group: a restart puts seq 0 in a second chain, and a fork leaves
+// the group's own ends short of what was read. A coverage line that takes the
+// group's ends can state something false.
+func TestTheCoverageFloorIsTheLowestSeqRead(t *testing.T) {
+	// c6_restart is two chains, 0 to 1 and a restart at 0. Without 00.hex the
+	// group that held it is gone, but the restart's own seq 0 is still read.
+	dir := kept(t, "c6_restart", "01.hex", "10.hex", "11.hex")
+	out := chainVerdict(t, dir)
+	if !strings.Contains(out, "coverage: seq 0 to 1") {
+		t.Fatalf("the floor is not the lowest seq read:\n%s", out)
+	}
+	if strings.Contains(out, "nothing before seq 1 is covered") {
+		t.Fatalf("the verdict says nothing before seq 1 is covered, and seq 0 was read:\n%s", out)
+	}
+}
+
+func TestTheCoverageCeilingIsTheHighestSeqRead(t *testing.T) {
+	// c2_fork: the fork is at seq 2, and seqs 2 to 4 are read beyond the ends
+	// of the group the walk followed.
+	out := chainVerdict(t, filepath.Join("testdata", "verify", "chain", "c2_fork"))
+	if !strings.Contains(out, "coverage: seq 0 to 4") {
+		t.Fatalf("the ceiling is not the highest seq read:\n%s", out)
+	}
+}
+
+// A set whose floor is 0 has nothing before it: saying so is vacuous, so the
+// line states the range and no warning.
+func TestACoverageFloorOfZeroSaysNothingVacuous(t *testing.T) {
+	out := chainVerdict(t, filepath.Join("testdata", "verify", "chain", "continuous"))
+	if !strings.Contains(out, "coverage: seq 0 to 4\n") {
+		t.Fatalf("a whole set does not state its range plainly:\n%s", out)
+	}
+}
+
+// chainVerdict is the printed verdict of one kept set, as a reader of the file
+// gets it.
+func chainVerdict(t *testing.T, dir string) string {
+	t.Helper()
+	file := func(n string) string { return filepath.Join("testdata", "verify", n+".hex") }
+	var out, errOut bytes.Buffer
+	RunVerify([]string{"--realm-key", file("realm_key"), "--realm", fixtureRealm, "--profile", "pq_hybrid",
+		"--endorsement", file("endorsement"), "--repo", fixtureRepo(t), "--path", "fixture-kx",
+		"--chain", dir}, &out, &errOut)
+	if out.Len() == 0 {
+		t.Fatalf("no verdict: %s", errOut.String())
+	}
+	return out.String()
+}
+
 // kept copies the named records of one fixture chain into a directory of its
 // own, so a test can read a set the fixtures do not hold: one that starts
 // above seq 0, or one with nothing chained at all.

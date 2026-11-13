@@ -996,18 +996,33 @@ func printChain(stdout io.Writer, r *ChainReport) {
 	}
 }
 
-// printCoverage states the floor of the range the verdict covers. A kept set
-// that starts at seq 541 reads "continuous" over the records it holds, and a
-// reader who takes that for the whole history is wrong by everything before
-// seq 541: the check begins at the first record held and looks at nothing
-// before it, so the verdict says so in its own words (mcl-fovea-records#5).
+// printCoverage states the floor and the ceiling of the range the verdict
+// covers. A kept set that starts at seq 541 reads "continuous" over the records
+// it holds, and a reader who takes that for the whole history is wrong by
+// everything before seq 541: the check begins at the first record held and
+// looks at nothing before it, so the verdict says so in its own words
+// (mcl-fovea-records#5).
+//
+// The ends are the lowest and highest seq READ, not the ends of the chain the
+// walk followed: a restart puts seq 0 in a second chain, and a fork's branches
+// carry seqs past the group's own end, so a line taken from the group's ends
+// can name a floor above a record it read and a ceiling below one
+// (macula-io/macula-fovea#12). Items holds the chained records in seq order,
+// ahead of the unchained ones.
 func printCoverage(w io.Writer, r *ChainReport) {
-	if r.Accepted-r.Unchained == 0 {
+	chained := r.Accepted - r.Unchained
+	if chained == 0 {
 		fmt.Fprintln(w, "  coverage: no chained record is held, so nothing is covered by this verdict")
 		return
 	}
+	floor, ceiling := r.Items[0].Seq, r.Items[chained-1].Seq
+	if floor == 0 {
+		// Nothing comes before seq 0, so the warning would be vacuous.
+		fmt.Fprintf(w, "  coverage: seq %d to %d\n", floor, ceiling)
+		return
+	}
 	fmt.Fprintf(w, "  coverage: seq %d to %d; the check starts at the first record held, "+
-		"so nothing before seq %d is covered\n", r.FirstSeq, r.LastSeq, r.FirstSeq)
+		"so nothing before seq %d is covered\n", floor, ceiling, floor)
 }
 
 func printGap(w io.Writer, g Gap) {
